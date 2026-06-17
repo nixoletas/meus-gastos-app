@@ -74,6 +74,62 @@ export function totalsByCategory(
     .sort((a, b) => b.total - a.total);
 }
 
+export type SubcategoryTotal = {
+  sub: Category | undefined; // undefined = lançado direto na categoria-mãe
+  key: string;
+  total: number;
+  count: number;
+  percent: number; // 0..1 sobre o total da categoria-mãe
+};
+
+/**
+ * Detalha os gastos de uma categoria-mãe agrupados por subcategoria,
+ * dentro do período. Lançamentos feitos direto na categoria ficam em
+ * "Sem subcategoria" (sub = undefined).
+ */
+export function subcategoryBreakdown(
+  expenses: Expense[],
+  categories: Category[],
+  parentId: string,
+  ref: Date,
+  period: Period
+): SubcategoryTotal[] {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const buckets = new Map<string, { total: number; count: number }>();
+
+  for (const e of expenses) {
+    if (!isInPeriod(e.occurred_at, ref, period)) continue;
+
+    // Descobre a subcategoria do lançamento dentro desta categoria-mãe.
+    let subId: string | null = null;
+    const sub = e.subcategory_id ? byId.get(e.subcategory_id) : undefined;
+    const cat = e.category_id ? byId.get(e.category_id) : undefined;
+
+    if (sub?.parent_id === parentId) subId = sub.id;
+    else if (cat?.parent_id === parentId) subId = cat.id;
+    else if (e.category_id === parentId) subId = null; // direto na mãe
+    else continue; // não pertence a esta categoria
+
+    const key = subId ?? '__none__';
+    const bucket = buckets.get(key) ?? { total: 0, count: 0 };
+    bucket.total += e.amount;
+    bucket.count += 1;
+    buckets.set(key, bucket);
+  }
+
+  const grandTotal = [...buckets.values()].reduce((s, b) => s + b.total, 0);
+
+  return [...buckets.entries()]
+    .map(([key, { total, count }]) => ({
+      key,
+      sub: key === '__none__' ? undefined : byId.get(key),
+      total,
+      count,
+      percent: grandTotal > 0 ? total / grandTotal : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
 export type BudgetAlert = {
   budget: Budget;
   category: Category | undefined;

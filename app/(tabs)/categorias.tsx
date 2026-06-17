@@ -125,9 +125,31 @@ export default function CategoriasScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="none"
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.textMuted }]}>
-            Nenhuma categoria encontrada.
-          </Text>
+          query.trim().length > 0 ? (
+            <PressableScale
+              onPress={() => {
+                tapLight();
+                router.push({ pathname: '/categoria', params: { name: query.trim() } });
+              }}
+              style={[styles.suggestCard, { backgroundColor: colors.card, borderColor: colors.primary }]}
+            >
+              <View style={[styles.suggestIcon, { backgroundColor: hexWithAlpha(colors.primary, 0.16) }]}>
+                <MaterialCommunityIcons name="plus" size={24} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.suggestTitle, { color: colors.text }]}>
+                  Criar “{query.trim()}”
+                </Text>
+                <Text style={[styles.suggestText, { color: colors.textMuted }]}>
+                  Nenhuma categoria encontrada. Toque para criar uma nova com esse nome.
+                </Text>
+              </View>
+            </PressableScale>
+          ) : (
+            <Text style={[styles.empty, { color: colors.textMuted }]}>
+              Nenhuma categoria ainda.
+            </Text>
+          )
         }
       />
     </View>
@@ -188,4 +210,23 @@ const styles = StyleSheet.create({
   },
   subChipText: { fontSize: 13, fontWeight: '500' },
   empty: { textAlign: 'center', marginTop: 40, fontSize: 15 },
+  suggestCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    marginTop: 8,
+  },
+  suggestIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suggestTitle: { fontSize: 16, fontWeight: '700' },
+  suggestText: { fontSize: 13, marginTop: 2, lineHeight: 18 },
 });

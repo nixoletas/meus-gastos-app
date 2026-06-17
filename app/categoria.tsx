@@ -25,14 +25,15 @@ import { notifySuccess, notifyWarning } from '../src/utils/haptics';
 export default function CategoriaScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; parentId?: string }>();
+  const params = useLocalSearchParams<{ id?: string; parentId?: string; name?: string }>();
   const { categories, addCategory, updateCategory, deleteCategory } = useData();
 
   const editing = categories.find((c) => c.id === params.id);
   const parent = categories.find((c) => c.id === (params.parentId ?? editing?.parent_id));
   const isSub = !!(params.parentId || editing?.parent_id);
 
-  const [name, setName] = useState('');
+  // Pré-preenche o nome quando vindo da busca ("Criar '<texto>'").
+  const [name, setName] = useState(typeof params.name === 'string' ? params.name : '');
   const [icon, setIcon] = useState<AppIconName>('tag');
   const [color, setColor] = useState(parent?.color ?? '#0EA5A4');
   const [pickerOpen, setPickerOpen] = useState(false);

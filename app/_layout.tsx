@@ -1,4 +1,11 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider as NavThemeProvider,
+  useRouter,
+  useSegments,
+} from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -13,7 +20,22 @@ function AuthGate() {
   const { session, loading, configured } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+
+  // Tema de navegação com as cores do app — evita o "flash branco" nas
+  // transições (o padrão do React Navigation usa fundo branco).
+  const base = isDark ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...base,
+    colors: {
+      ...base.colors,
+      background: colors.background,
+      card: colors.card,
+      border: colors.border,
+      text: colors.text,
+      primary: colors.primary,
+    },
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -49,19 +71,34 @@ function AuthGate() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="config" />
-      <Stack.Screen
-        name="novo"
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-      />
-      <Stack.Screen
-        name="categoria"
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-      />
-    </Stack>
+    <NavThemeProvider value={navTheme}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="config" />
+        <Stack.Screen
+          name="novo"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        />
+        <Stack.Screen
+          name="categoria"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        />
+      </Stack>
+    </NavThemeProvider>
   );
 }
 
