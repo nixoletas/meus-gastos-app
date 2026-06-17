@@ -7,7 +7,6 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '../theme/ThemeContext';
@@ -78,30 +77,29 @@ export function SuccessOverlay({ visible, amountLabel, onDone }: Props) {
   const circleScale = useSharedValue(0);
   const checkScale = useSharedValue(0);
   const labelOpacity = useSharedValue(0);
-  const contentScale = useSharedValue(1);
+  const doneTrigger = useSharedValue(0);
 
   useEffect(() => {
     if (!visible) return;
 
     // Cobre a tela rapidamente (fundo sólido).
-    overlayOpacity.value = withTiming(1, { duration: 90 });
+    overlayOpacity.value = withTiming(1, { duration: 80 });
 
     // Onda/anel que "explode" atrás do círculo.
     ringScale.value = 0;
-    ringOpacity.value = 0.45;
-    ringScale.value = withTiming(2.4, { duration: 620, easing: Easing.out(Easing.cubic) });
-    ringOpacity.value = withTiming(0, { duration: 620 });
+    ringOpacity.value = 0.4;
+    ringScale.value = withTiming(2.1, { duration: 380, easing: Easing.out(Easing.quad) });
+    ringOpacity.value = withTiming(0, { duration: 380, easing: Easing.out(Easing.quad) });
 
-    // Círculo + check entram com mola.
-    circleScale.value = withSpring(1, { damping: 9, stiffness: 150 });
-    checkScale.value = withDelay(100, withSpring(1, { damping: 7, stiffness: 190 }));
-    labelOpacity.value = withDelay(180, withTiming(1, { duration: 220 }));
+    // Círculo + check entram suaves (sem salto).
+    circleScale.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) });
+    checkScale.value = withDelay(90, withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) }));
+    labelOpacity.value = withDelay(150, withTiming(1, { duration: 160 }));
 
-    // Ao final, dá um leve "respiro" e fecha — mantendo o overlay OPACO,
-    // de modo que o modal desça já coberto (sem flash do formulário).
-    contentScale.value = withDelay(
-      980,
-      withSpring(1.06, { damping: 10, stiffness: 200 }, (finished) => {
+    // Fecha mantendo o overlay OPACO (o modal desce já coberto, sem flash).
+    doneTrigger.value = withDelay(
+      560,
+      withTiming(1, { duration: 1 }, (finished) => {
         if (finished) runOnJS(onDone)();
       })
     );
@@ -111,9 +109,6 @@ export function SuccessOverlay({ visible, amountLabel, onDone }: Props) {
   const ringStyle = useAnimatedStyle(() => ({
     opacity: ringOpacity.value,
     transform: [{ scale: ringScale.value }],
-  }));
-  const contentStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: contentScale.value }],
   }));
   const circleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: circleScale.value }],
@@ -132,7 +127,7 @@ export function SuccessOverlay({ visible, amountLabel, onDone }: Props) {
     <Animated.View
       style={[styles.overlay, overlayStyle, { backgroundColor: colors.background }]}
     >
-      <Animated.View style={[styles.center, contentStyle]}>
+      <View style={styles.center}>
         {/* Partículas */}
         <View style={styles.particleWrap}>
           {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
@@ -160,7 +155,7 @@ export function SuccessOverlay({ visible, amountLabel, onDone }: Props) {
           </Text>
           <Text style={[styles.amount, { color: colors.text }]}>{amountLabel}</Text>
         </Animated.View>
-      </Animated.View>
+      </View>
     </Animated.View>
   );
 }

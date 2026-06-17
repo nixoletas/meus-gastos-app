@@ -1,9 +1,10 @@
 import React from 'react';
 import { Pressable, PressableProps, ViewStyle } from 'react-native';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { tapLight } from '../utils/haptics';
 
@@ -39,12 +40,12 @@ export function PressableScale({
       {...rest}
       style={[style, animatedStyle]}
       onPressIn={(e) => {
-        scale.value = withSpring(scaleTo, { damping: 15, stiffness: 400 });
+        scale.value = withTiming(scaleTo, { duration: 90, easing: Easing.out(Easing.quad) });
         if (haptic) tapLight();
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        scale.value = withSpring(1, { damping: 12, stiffness: 300 });
+        scale.value = withTiming(1, { duration: 110, easing: Easing.out(Easing.quad) });
         onPressOut?.(e);
       }}
     >

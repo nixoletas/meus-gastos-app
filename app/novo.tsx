@@ -12,10 +12,10 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -100,10 +100,10 @@ export default function NovoGastoScreen() {
 
   function handleAmountChange(text: string) {
     setRaw(text.replace(/\D/g, '').slice(0, 11));
-    // Pulso sutil para suavizar a digitação do valor.
+    // Pulso sutil (e curto, sem salto) para suavizar a digitação do valor.
     amountScale.value = withSequence(
-      withTiming(1.06, { duration: 70 }),
-      withSpring(1, { damping: 12, stiffness: 320 })
+      withTiming(1.03, { duration: 50, easing: Easing.out(Easing.quad) }),
+      withTiming(1, { duration: 70, easing: Easing.out(Easing.quad) })
     );
   }
 
