@@ -11,6 +11,10 @@ export default function TabsLayout() {
   const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // No Android, garante uma folga mínima sobre a navbar do sistema mesmo
+  // quando o inset reportado é pequeno.
+  const bottomInset =
+    Platform.OS === 'android' ? Math.max(insets.bottom, 12) : insets.bottom;
 
   return (
     <View style={{ flex: 1 }}>
@@ -19,14 +23,15 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textMuted,
+          // Garante que a barra fique acima da navbar nativa do Android (insets.bottom).
           tabBarStyle: {
             backgroundColor: colors.card,
             borderTopColor: colors.border,
-            height: 58 + insets.bottom,
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+            height: 60 + bottomInset,
+            paddingBottom: bottomInset + 8,
             paddingTop: 8,
           },
-          tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         }}
       >
         <Tabs.Screen
@@ -87,7 +92,7 @@ export default function TabsLayout() {
           styles.fab,
           {
             backgroundColor: colors.primary,
-            bottom: 58 + insets.bottom + 18,
+            bottom: 60 + bottomInset + 18,
             shadowColor: colors.primary,
           },
         ]}

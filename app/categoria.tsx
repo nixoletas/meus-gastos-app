@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -104,6 +105,10 @@ export default function CategoriaScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.flex}
+      >
       <View style={styles.headerBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.headerBtn}>
           <MaterialCommunityIcons name="close" size={26} color={colors.text} />
@@ -175,6 +180,7 @@ export default function CategoriaScreen() {
           </Text>
         </PressableScale>
       </View>
+      </KeyboardAvoidingView>
 
       <IconPicker
         visible={pickerOpen}
@@ -189,6 +195,7 @@ export default function CategoriaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  flex: { flex: 1 },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',

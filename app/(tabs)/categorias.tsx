@@ -42,41 +42,6 @@ export default function CategoriasScreen() {
       .filter((c): c is CategoryWithSubs => c !== null);
   }, [categoriesWithSubs, query]);
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.titleRow}>
-        <Text style={[styles.title, { color: colors.text }]}>Categorias</Text>
-        <PressableScale
-          onPress={() => {
-            tapLight();
-            router.push('/categoria');
-          }}
-          style={[styles.addBtn, { backgroundColor: colors.primary }]}
-        >
-          <MaterialCommunityIcons name="plus" size={20} color={colors.onPrimary} />
-          <Text style={[styles.addBtnText, { color: colors.onPrimary }]}>Nova</Text>
-        </PressableScale>
-      </View>
-
-      <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Buscar categoria ou subcategoria"
-          placeholderTextColor={colors.textMuted}
-          style={[styles.searchInput, { color: colors.text }]}
-          autoCorrect={false}
-        />
-        {query.length > 0 && (
-          <Pressable onPress={() => setQuery('')} hitSlop={8}>
-            <MaterialCommunityIcons name="close-circle" size={18} color={colors.textMuted} />
-          </Pressable>
-        )}
-      </View>
-    </View>
-  );
-
   const renderItem = ({ item }: { item: CategoryWithSubs }) => (
     <View style={[styles.card, { backgroundColor: colors.card }]}>
       <Pressable
@@ -116,15 +81,49 @@ export default function CategoriasScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      {/* Cabeçalho fixo (fora do FlatList) para o teclado não fechar ao digitar. */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: colors.text }]}>Categorias</Text>
+          <PressableScale
+            onPress={() => {
+              tapLight();
+              router.push('/categoria');
+            }}
+            style={[styles.addBtn, { backgroundColor: colors.primary }]}
+          >
+            <MaterialCommunityIcons name="plus" size={20} color={colors.onPrimary} />
+            <Text style={[styles.addBtnText, { color: colors.onPrimary }]}>Nova</Text>
+          </PressableScale>
+        </View>
+
+        <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Buscar categoria ou subcategoria"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.searchInput, { color: colors.text }]}
+            autoCorrect={false}
+          />
+          {query.length > 0 && (
+            <Pressable onPress={() => setQuery('')} hitSlop={8}>
+              <MaterialCommunityIcons name="close-circle" size={18} color={colors.textMuted} />
+            </Pressable>
+          )}
+        </View>
+      </View>
+
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        ListHeaderComponent={renderHeader}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.textMuted }]}>
             Nenhuma categoria encontrada.
@@ -139,12 +138,21 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   listContent: {
     paddingHorizontal: 16,
+    paddingTop: 4,
     paddingBottom: 140,
     maxWidth: 640,
     width: '100%',
     alignSelf: 'center',
   },
-  header: { gap: 16, paddingTop: 8, paddingBottom: 12 },
+  fixedHeader: {
+    gap: 14,
+    paddingTop: 8,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    maxWidth: 640,
+    width: '100%',
+    alignSelf: 'center',
+  },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: '800' },
   addBtn: {

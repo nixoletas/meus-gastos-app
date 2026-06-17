@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hexWithAlpha } from '../../src/components/CategoryIcon';
+import { PressableScale } from '../../src/components/PressableScale';
 import { useAuth } from '../../src/context/AuthContext';
 import { ThemePreference, useTheme } from '../../src/theme/ThemeContext';
 import { notifyWarning, tapLight } from '../../src/utils/haptics';
@@ -12,6 +13,7 @@ export default function AjustesScreen() {
   const { session, signOut, deleteAccount } = useAuth();
   const insets = useSafeAreaInsets();
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const themeOptions: { key: ThemePreference; label: string; icon: any }[] = [
     { key: 'light', label: 'Claro', icon: 'white-balance-sunny' },
@@ -25,23 +27,11 @@ export default function AjustesScreen() {
     setDeleting(false);
     if (error) {
       notifyWarning();
+      setConfirmOpen(false);
       if (Platform.OS === 'web') window.alert(error);
       else Alert.alert('Erro', error);
     }
     // Em caso de sucesso, o signOut redireciona automaticamente para o login.
-  }
-
-  function confirmDelete() {
-    const msg =
-      'Tem certeza que deseja excluir sua conta? Todos os seus gastos, categorias e limites serão apagados permanentemente. Esta ação não pode ser desfeita.';
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(msg)) runDelete();
-      return;
-    }
-    Alert.alert('Excluir conta', msg, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir conta', style: 'destructive', onPress: runDelete },
-    ]);
   }
 
   return (
@@ -122,18 +112,14 @@ export default function AjustesScreen() {
       <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>ZONA DE PERIGO</Text>
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <Pressable
-          onPress={confirmDelete}
-          disabled={deleting}
+          onPress={() => {
+            tapLight();
+            setConfirmOpen(true);
+          }}
           style={[styles.deleteBtn, { backgroundColor: colors.dangerSoft }]}
         >
-          {deleting ? (
-            <ActivityIndicator color={colors.danger} />
-          ) : (
-            <>
-              <MaterialCommunityIcons name="account-remove" size={20} color={colors.danger} />
-              <Text style={[styles.deleteText, { color: colors.danger }]}>Excluir conta</Text>
-            </>
-          )}
+          <MaterialCommunityIcons name="account-remove" size={20} color={colors.danger} />
+          <Text style={[styles.deleteText, { color: colors.danger }]}>Excluir conta</Text>
         </Pressable>
         <Text style={[styles.deleteHint, { color: colors.textMuted }]}>
           Apaga permanentemente sua conta e todos os dados (gastos, categorias e
@@ -144,6 +130,58 @@ export default function AjustesScreen() {
       <Text style={[styles.footerNote, { color: colors.textMuted }]}>
         Meus Gastos · feito no Brasil 🇧🇷
       </Text>
+
+      {/* Modal emocional de confirmação de exclusão */}
+      <Modal
+        visible={confirmOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleting && setConfirmOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.modalIcon, { backgroundColor: hexWithAlpha(colors.danger, 0.14) }]}>
+              <Text style={styles.modalEmoji}>🥺</Text>
+            </View>
+
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Já vai mesmo? Vamos sentir sua falta...
+            </Text>
+            <Text style={[styles.modalBody, { color: colors.textMuted }]}>
+              A gente acompanhou cada gasto seu com carinho. Se você excluir sua
+              conta, todo esse histórico — seus gastos, categorias e limites — vai
+              desaparecer para sempre, e não tem como voltar atrás. 💔
+            </Text>
+            <Text style={[styles.modalBody, { color: colors.textMuted }]}>
+              Tem certeza que é isso mesmo que você quer?
+            </Text>
+
+            <PressableScale
+              onPress={() => {
+                tapLight();
+                setConfirmOpen(false);
+              }}
+              disabled={deleting}
+              scaleTo={0.97}
+              style={[styles.modalStay, { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.modalStayText, { color: colors.onPrimary }]}>
+                Quero ficar 💚
+              </Text>
+            </PressableScale>
+
+            <Pressable onPress={runDelete} disabled={deleting} style={styles.modalLeave}>
+              {deleting ? (
+                <ActivityIndicator color={colors.danger} />
+              ) : (
+                <Text style={[styles.modalLeaveText, { color: colors.danger }]}>
+                  Excluir minha conta mesmo assim
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -207,4 +245,41 @@ const styles = StyleSheet.create({
   deleteText: { fontSize: 16, fontWeight: '700' },
   deleteHint: { fontSize: 13, marginTop: 10, lineHeight: 19, textAlign: 'center' },
   footerNote: { textAlign: 'center', marginTop: 30, fontSize: 13 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 26,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  modalEmoji: { fontSize: 40 },
+  modalTitle: { fontSize: 21, fontWeight: '800', textAlign: 'center', marginBottom: 10 },
+  modalBody: { fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 10 },
+  modalStay: {
+    height: 54,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    marginTop: 8,
+  },
+  modalStayText: { fontSize: 17, fontWeight: '800' },
+  modalLeave: { height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  modalLeaveText: { fontSize: 15, fontWeight: '600' },
 });
+

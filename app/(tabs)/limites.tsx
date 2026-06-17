@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -25,6 +26,8 @@ export default function LimitesScreen() {
   const insets = useSafeAreaInsets();
   const { budgets, expenses, categories, categoriesWithSubs, setBudget, deleteBudget } =
     useData();
+
+  const scrollRef = useRef<ScrollView>(null);
 
   // Formulário de novo limite.
   const [period, setPeriod] = useState<Period>('month');
@@ -60,7 +63,12 @@ export default function LimitesScreen() {
   }
 
   return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
     <ScrollView
+      ref={scrollRef}
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
       keyboardShouldPersistTaps="handled"
@@ -196,6 +204,7 @@ export default function LimitesScreen() {
           <TextInput
             value={maskCurrencyInput(raw)}
             onChangeText={(t) => setRaw(t.replace(/\D/g, '').slice(0, 11))}
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
             keyboardType="number-pad"
             style={[styles.amountInput, { color: colors.text }]}
             placeholder="0,00"
@@ -215,6 +224,7 @@ export default function LimitesScreen() {
         </PressableScale>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

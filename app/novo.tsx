@@ -11,8 +11,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../src/components/AppIcon';
+import { CalendarModal } from '../src/components/CalendarModal';
 import { hexWithAlpha } from '../src/components/CategoryIcon';
 import { PressableScale } from '../src/components/PressableScale';
 import { SuccessOverlay } from '../src/components/SuccessOverlay';
@@ -34,6 +42,7 @@ export default function NovoGastoScreen() {
     deleteExpense,
   } = useData();
 
+  const { categories } = useData();
   const editing = expenses.find((e) => e.id === params.id);
 
   const [raw, setRaw] = useState('');
@@ -43,7 +52,37 @@ export default function NovoGastoScreen() {
   const [date, setDate] = useState(new Date());
   const [showSuccess, setShowSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const amountRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Pequena animação de "pulo" no valor a cada dígito digitado.
+  const amountScale = useSharedValue(1);
+  const amountAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: amountScale.value }],
+  }));
+
+  // Detecta categorias recém-criadas (via "+ Criar") para selecioná-las na hora.
+  const knownIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const currentIds = new Set(categories.map((c) => c.id));
+    if (knownIds.current === null) {
+      knownIds.current = currentIds;
+      return;
+    }
+    const novos = categories.filter((c) => !knownIds.current!.has(c.id));
+    knownIds.current = currentIds;
+    if (novos.length === 1) {
+      const nova = novos[0];
+      if (nova.parent_id) {
+        setCategoryId(nova.parent_id);
+        setSubcategoryId(nova.id);
+      } else {
+        setCategoryId(nova.id);
+        setSubcategoryId(null);
+      }
+    }
+  }, [categories]);
 
   // Pré-carrega os dados quando estamos editando um gasto.
   useEffect(() => {
@@ -58,6 +97,15 @@ export default function NovoGastoScreen() {
       return () => clearTimeout(t);
     }
   }, [editing?.id]);
+
+  function handleAmountChange(text: string) {
+    setRaw(text.replace(/\D/g, '').slice(0, 11));
+    // Pulso sutil para suavizar a digitação do valor.
+    amountScale.value = withSequence(
+      withTiming(1.06, { duration: 70 }),
+      withSpring(1, { damping: 12, stiffness: 320 })
+    );
+  }
 
   const amount = rawToReais(raw);
   const selectedCategory = categoriesWithSubs.find((c) => c.id === categoryId);
@@ -111,10 +159,16 @@ export default function NovoGastoScreen() {
     ];
   }, []);
 
+  // Verdadeiro quando a data escolhida é Hoje ou Ontem (atalhos rápidos).
+  const isQuickDate = quickDates.some(
+    (q) => toISODate(q.value) === toISODate(date)
+  );
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         style={styles.flex}
       >
         {/* Cabeçalho */}
@@ -135,27 +189,30 @@ export default function NovoGastoScreen() {
         </View>
 
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           {/* Valor com máscara de R$ */}
-          <Pressable
-            style={styles.amountWrap}
-            onPress={() => amountRef.current?.focus()}
-          >
-            <Text style={[styles.currencySymbol, { color: colors.textMuted }]}>R$</Text>
-            <TextInput
-              ref={amountRef}
-              value={maskCurrencyInput(raw)}
-              onChangeText={(t) => setRaw(t.replace(/\D/g, '').slice(0, 11))}
-              keyboardType="number-pad"
-              style={[styles.amountInput, { color: amount > 0 ? colors.text : colors.textMuted }]}
-              placeholder="0,00"
-              placeholderTextColor={colors.textMuted}
-              selectionColor={colors.primary}
-            />
-          </Pressable>
+          <Animated.View style={amountAnimStyle}>
+            <Pressable
+              style={styles.amountWrap}
+              onPress={() => amountRef.current?.focus()}
+            >
+              <Text style={[styles.currencySymbol, { color: colors.textMuted }]}>R$</Text>
+              <TextInput
+                ref={amountRef}
+                value={maskCurrencyInput(raw)}
+                onChangeText={handleAmountChange}
+                keyboardType="number-pad"
+                style={[styles.amountInput, { color: amount > 0 ? colors.text : colors.textMuted }]}
+                placeholder="0,00"
+                placeholderTextColor={colors.textMuted}
+                selectionColor={colors.primary}
+              />
+            </Pressable>
+          </Animated.View>
 
           {/* Categorias */}
           <Text style={[styles.label, { color: colors.text }]}>Categoria</Text>
@@ -190,10 +247,21 @@ export default function NovoGastoScreen() {
                 </PressableScale>
               );
             })}
+            {/* Criar nova categoria na hora */}
+            <Pressable
+              onPress={() => {
+                tapLight();
+                router.push('/categoria');
+              }}
+              style={[styles.createChip, { borderColor: colors.primary }]}
+            >
+              <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
+              <Text style={[styles.chipText, { color: colors.primary }]}>Criar</Text>
+            </Pressable>
           </View>
 
           {/* Subcategorias da categoria escolhida */}
-          {selectedCategory && selectedCategory.subcategories.length > 0 && (
+          {selectedCategory && (
             <>
               <Text style={[styles.label, { color: colors.text }]}>
                 Subcategoria <Text style={{ color: colors.textMuted }}>(opcional)</Text>
@@ -229,6 +297,22 @@ export default function NovoGastoScreen() {
                     </Pressable>
                   );
                 })}
+                {/* Criar nova subcategoria na hora */}
+                <Pressable
+                  onPress={() => {
+                    tapLight();
+                    router.push({
+                      pathname: '/categoria',
+                      params: { parentId: selectedCategory.id },
+                    });
+                  }}
+                  style={[styles.subCreateChip, { borderColor: selectedCategory.color }]}
+                >
+                  <MaterialCommunityIcons name="plus" size={15} color={selectedCategory.color} />
+                  <Text style={[styles.subChipText, { color: selectedCategory.color }]}>
+                    Criar
+                  </Text>
+                </Pressable>
               </View>
             </>
           )}
@@ -263,22 +347,27 @@ export default function NovoGastoScreen() {
                 </Pressable>
               );
             })}
-            <View style={[styles.dateChip, { backgroundColor: colors.surface }]}>
-              <MaterialCommunityIcons name="calendar" size={16} color={colors.textMuted} />
+            <Pressable
+              onPress={() => {
+                tapLight();
+                setCalendarOpen(true);
+              }}
+              style={[styles.dateChip, { backgroundColor: colors.surface }]}
+            >
+              <MaterialCommunityIcons name="calendar-month" size={16} color={colors.primary} />
               <Text style={{ color: colors.text, fontWeight: '600' }}>
-                {relativeDayLabel(toISODate(date))}
+                {isQuickDate ? 'Outra data' : relativeDayLabel(toISODate(date))}
               </Text>
-            </View>
+            </Pressable>
           </View>
 
-          {/* Observação */}
-          <Text style={[styles.label, { color: colors.text }]}>
-            Observação <Text style={{ color: colors.textMuted }}>(opcional)</Text>
-          </Text>
+          {/* Notas */}
+          <Text style={[styles.label, { color: colors.text }]}>Notas</Text>
           <TextInput
             value={note}
             onChangeText={setNote}
-            placeholder="Ex.: almoço com a equipe"
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
+            placeholder="sushi com a família"
             placeholderTextColor={colors.textMuted}
             style={[
               styles.noteInput,
@@ -322,6 +411,13 @@ export default function NovoGastoScreen() {
           setShowSuccess(false);
           router.back();
         }}
+      />
+
+      <CalendarModal
+        visible={calendarOpen}
+        selected={date}
+        onSelect={setDate}
+        onClose={() => setCalendarOpen(false)}
       />
     </SafeAreaView>
   );
@@ -375,6 +471,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   chipText: { fontSize: 14, fontWeight: '600' },
+  createChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+  },
   subChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -383,6 +489,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1.5,
+  },
+  subCreateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
   },
   subChipText: { fontSize: 13, fontWeight: '500' },
   dateChip: {
