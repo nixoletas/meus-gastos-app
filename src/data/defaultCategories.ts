@@ -1,13 +1,13 @@
-import { IconName } from './icons';
+import { AppIconName } from './icons';
 
 export type DefaultSubcategory = {
   name: string;
-  icon: IconName;
+  icon: AppIconName;
 };
 
 export type DefaultCategory = {
   name: string;
-  icon: IconName;
+  icon: AppIconName;
   color: string;
   subcategories: DefaultSubcategory[];
 };
@@ -103,6 +103,33 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
       { name: 'Livros', icon: 'book-open-variant' },
       { name: 'Material', icon: 'pencil' },
       { name: 'Mensalidade', icon: 'book-education' },
+    ],
+  },
+  {
+    name: 'Assinaturas',
+    icon: 'application',
+    color: '#E11D48',
+    subcategories: [
+      { name: 'Netflix', icon: 'brand:netflix' },
+      { name: 'Spotify', icon: 'brand:spotify' },
+      { name: 'YouTube Premium', icon: 'brand:youtube' },
+      { name: 'Disney+', icon: 'star-circle' },
+      { name: 'Amazon Prime', icon: 'package-variant-closed' },
+      { name: 'HBO Max', icon: 'brand:hbomax' },
+      { name: 'Paramount+', icon: 'brand:paramountplus' },
+      { name: 'Crunchyroll', icon: 'brand:crunchyroll' },
+      { name: 'Apple Music', icon: 'brand:applemusic' },
+      { name: 'Deezer', icon: 'brand:deezer' },
+      { name: 'iCloud', icon: 'brand:icloud' },
+      { name: 'Google One', icon: 'brand:googleplay' },
+      { name: 'Microsoft 365', icon: 'microsoft' },
+      { name: 'Uber', icon: 'brand:uber' },
+      { name: 'Uber Eats', icon: 'brand:ubereats' },
+      { name: 'iFood', icon: 'brand:ifood' },
+      { name: 'Mercado Livre', icon: 'shopping' },
+      { name: 'Xbox Game Pass', icon: 'microsoft-xbox' },
+      { name: 'PlayStation Plus', icon: 'brand:playstation' },
+      { name: 'Twitch', icon: 'brand:twitch' },
     ],
   },
   {

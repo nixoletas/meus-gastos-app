@@ -87,3 +87,22 @@ begin
       'create policy "%1$s_delete" on public.%1$s for delete using (auth.uid() = user_id);', t);
   end loop;
 end $$;
+
+-- ============================================================================
+--  Exclusão de conta: o usuário logado pode apagar a própria conta.
+--  Como roda com SECURITY DEFINER, consegue remover a linha de auth.users;
+--  o ON DELETE CASCADE apaga automaticamente categorias, gastos e limites.
+-- ============================================================================
+create or replace function public.delete_account()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.delete_account() from public, anon;
+grant execute on function public.delete_account() to authenticated;

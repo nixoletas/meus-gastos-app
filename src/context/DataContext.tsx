@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { DEFAULT_CATEGORIES } from '../data/defaultCategories';
-import { IconName } from '../data/icons';
+import { AppIconName } from '../data/icons';
 import { supabase } from '../lib/supabase';
 import { Budget, Category, CategoryWithSubs, Expense } from '../types';
 import { useAuth } from './AuthContext';
@@ -22,7 +22,7 @@ type NewExpense = {
 
 type CategoryInput = {
   name: string;
-  icon: IconName;
+  icon: AppIconName;
   color: string;
   parent_id: string | null;
 };

@@ -1,10 +1,10 @@
-import { IconName } from './data/icons';
+import { AppIconName } from './data/icons';
 
 export type Category = {
   id: string;
   user_id: string;
   name: string;
-  icon: IconName;
+  icon: AppIconName;
   color: string;
   parent_id: string | null;
   created_at: string;

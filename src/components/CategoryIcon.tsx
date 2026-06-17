@@ -1,10 +1,10 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { View } from 'react-native';
-import { IconName } from '../data/icons';
+import { AppIconName } from '../data/icons';
+import { AppIcon } from './AppIcon';
 
 type Props = {
-  icon: IconName;
+  icon: AppIconName;
   color: string;
   size?: number;
   /** Quando true, o fundo fica sólido na cor; senão, fundo suave translúcido. */
@@ -25,11 +25,7 @@ export function CategoryIcon({ icon, color, size = 44, solid = false }: Props) {
         backgroundColor: solid ? color : hexWithAlpha(color, 0.16),
       }}
     >
-      <MaterialCommunityIcons
-        name={icon}
-        size={iconSize}
-        color={solid ? '#FFFFFF' : color}
-      />
+      <AppIcon icon={icon} size={iconSize} color={solid ? '#FFFFFF' : color} />
     </View>
   );
 }

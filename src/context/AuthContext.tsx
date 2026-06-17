@@ -16,6 +16,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<AuthResult>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -75,6 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const deleteAccount: AuthContextValue['deleteAccount'] = async () => {
+    const { error } = await supabase.rpc('delete_account');
+    if (error) return { error: traduzErro(error.message) };
+    await supabase.auth.signOut();
+    return { error: null };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -84,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         signOut,
+        deleteAccount,
       }}
     >
       {children}

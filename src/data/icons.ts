@@ -1,18 +1,47 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { BRAND_ICONS } from './brandIcons';
 
 export type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
+/** Nome de ícone do app: glyph do MaterialCommunityIcons ou "brand:<marca>". */
+export type AppIconName = string;
+
 export type CatalogIcon = {
-  name: IconName;
+  name: AppIconName;
   /** Palavras-chave em pt-BR para a busca de ícones. */
   keywords: string[];
 };
 
+/** Logos de marcas (serviços de assinatura) disponíveis no seletor de ícones. */
+export const BRAND_CATALOG: CatalogIcon[] = [
+  { name: 'brand:netflix', keywords: ['netflix', 'streaming', 'assinatura', 'filme'] },
+  { name: 'brand:spotify', keywords: ['spotify', 'música', 'assinatura', 'podcast'] },
+  { name: 'brand:youtube', keywords: ['youtube', 'premium', 'streaming', 'vídeo'] },
+  { name: 'brand:youtubemusic', keywords: ['youtube music', 'música', 'streaming'] },
+  { name: 'brand:applemusic', keywords: ['apple music', 'música', 'streaming'] },
+  { name: 'brand:icloud', keywords: ['icloud', 'apple', 'nuvem', 'armazenamento'] },
+  { name: 'brand:apple', keywords: ['apple', 'apple one', 'tv', 'assinatura'] },
+  { name: 'brand:googleplay', keywords: ['google play', 'google', 'assinatura', 'apps'] },
+  { name: 'brand:google', keywords: ['google', 'google one', 'workspace', 'nuvem'] },
+  { name: 'brand:uber', keywords: ['uber', 'corrida', 'transporte'] },
+  { name: 'brand:ubereats', keywords: ['uber eats', 'delivery', 'comida'] },
+  { name: 'brand:ifood', keywords: ['ifood', 'delivery', 'comida', 'restaurante'] },
+  { name: 'brand:hbomax', keywords: ['hbo max', 'max', 'streaming', 'filme'] },
+  { name: 'brand:max', keywords: ['max', 'hbo', 'streaming'] },
+  { name: 'brand:paramountplus', keywords: ['paramount', 'streaming', 'filme'] },
+  { name: 'brand:deezer', keywords: ['deezer', 'música', 'streaming'] },
+  { name: 'brand:playstation', keywords: ['playstation', 'plus', 'games', 'jogos'] },
+  { name: 'brand:crunchyroll', keywords: ['crunchyroll', 'anime', 'streaming'] },
+  { name: 'brand:twitch', keywords: ['twitch', 'streaming', 'games'] },
+  { name: 'brand:dropbox', keywords: ['dropbox', 'nuvem', 'armazenamento'] },
+];
+
 /**
  * Catálogo curado de ícones para categorias.
- * Usamos MaterialCommunityIcons (milhares de ícones bonitos e consistentes).
+ * Combina logos de marcas e ícones do MaterialCommunityIcons.
  */
 export const ICON_CATALOG: CatalogIcon[] = [
+  ...BRAND_CATALOG,
   // Alimentação
   { name: 'silverware-fork-knife', keywords: ['comida', 'restaurante', 'almoço', 'jantar', 'alimentação'] },
   { name: 'food', keywords: ['comida', 'lanche', 'fast food'] },

@@ -9,15 +9,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { IconName, searchIcons } from '../data/icons';
+import { AppIconName, searchIcons } from '../data/icons';
 import { useTheme } from '../theme/ThemeContext';
+import { AppIcon } from './AppIcon';
 import { hexWithAlpha } from './CategoryIcon';
 
 type Props = {
   visible: boolean;
-  selected: IconName;
+  selected: AppIconName;
   color: string;
-  onSelect: (icon: IconName) => void;
+  onSelect: (icon: AppIconName) => void;
   onClose: () => void;
 };
 
@@ -75,7 +76,7 @@ export function IconPicker({ visible, selected, color, onSelect, onClose }: Prop
               return (
                 <Pressable
                   onPress={() => {
-                    onSelect(item.name as IconName);
+                    onSelect(item.name);
                     onClose();
                   }}
                   style={[
@@ -88,8 +89,8 @@ export function IconPicker({ visible, selected, color, onSelect, onClose }: Prop
                     },
                   ]}
                 >
-                  <MaterialCommunityIcons
-                    name={item.name}
+                  <AppIcon
+                    icon={item.name}
                     size={26}
                     color={isSel ? color : colors.text}
                   />

@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppIcon } from '../src/components/AppIcon';
 import { hexWithAlpha } from '../src/components/CategoryIcon';
 import { PressableScale } from '../src/components/PressableScale';
 import { SuccessOverlay } from '../src/components/SuccessOverlay';
@@ -177,7 +178,7 @@ export default function NovoGastoScreen() {
                     },
                   ]}
                 >
-                  <MaterialCommunityIcons name={cat.icon} size={20} color={cat.color} />
+                  <AppIcon icon={cat.icon} size={20} color={cat.color} />
                   <Text
                     style={[
                       styles.chipText,
@@ -217,8 +218,8 @@ export default function NovoGastoScreen() {
                         },
                       ]}
                     >
-                      <MaterialCommunityIcons
-                        name={sub.icon}
+                      <AppIcon
+                        icon={sub.icon}
                         size={16}
                         color={selectedCategory.color}
                       />

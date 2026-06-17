@@ -1,10 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -19,17 +21,19 @@ import { Expense } from '../../src/types';
 import {
   evaluateBudgets,
   expensesForPeriod,
-  totalsByCategory,
   totalForPeriod,
 } from '../../src/utils/analytics';
 import { formatBRL } from '../../src/utils/currency';
-import { Period } from '../../src/utils/date';
+import { Period, shiftPeriod } from '../../src/utils/date';
 
 export default function HomeScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { expenses, categories, budgets, getCategory, loading, seeding } = useData();
+
+  // Segunda cor do gradiente do cartão de total (primário → ciano).
+  const gradientEnd = isDark ? '#0D9488' : '#0891B2';
 
   const [period, setPeriod] = useState<Period>('month');
   const [refDate, setRefDate] = useState(new Date());
@@ -42,17 +46,22 @@ export default function HomeScreen() {
     () => totalForPeriod(expenses, refDate, period),
     [expenses, refDate, period]
   );
-  const byCategory = useMemo(
-    () => totalsByCategory(expenses, categories, refDate, period).slice(0, 4),
-    [expenses, categories, refDate, period]
+  const prevTotal = useMemo(
+    () => totalForPeriod(expenses, shiftPeriod(refDate, period, -1), period),
+    [expenses, refDate, period]
   );
-  const alerts = useMemo(
+  // Variação percentual em relação ao período anterior.
+  const trend = prevTotal > 0 ? (total - prevTotal) / prevTotal : null;
+
+  // Todos os limites do período atual (para a seção "Limite de gastos").
+  const periodBudgets = useMemo(
     () =>
-      evaluateBudgets(budgets, expenses, categories, refDate).filter(
-        (a) => a.level !== 'ok' && a.budget.period === period
-      ),
+      evaluateBudgets(budgets, expenses, categories, refDate)
+        .filter((a) => a.budget.period === period)
+        .sort((a, b) => b.ratio - a.ratio),
     [budgets, expenses, categories, refDate, period]
   );
+  const alerts = periodBudgets.filter((a) => a.level !== 'ok');
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -73,18 +82,44 @@ export default function HomeScreen() {
       />
 
       {/* Cartão de total do período */}
-      <View style={[styles.totalCard, { backgroundColor: colors.primary }]}>
-        <Text style={[styles.totalLabel, { color: hexWithAlpha(colors.onPrimary, 0.85) }]}>
-          Total gasto {period === 'month' ? 'no mês' : 'no ano'}
-        </Text>
-        <Text style={[styles.totalValue, { color: colors.onPrimary }]}>
-          {formatBRL(total)}
-        </Text>
-        <Text style={[styles.totalCount, { color: hexWithAlpha(colors.onPrimary, 0.85) }]}>
-          {periodExpenses.length}{' '}
-          {periodExpenses.length === 1 ? 'lançamento' : 'lançamentos'}
-        </Text>
-      </View>
+      <LinearGradient
+        colors={[colors.primary, gradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.totalCard}
+      >
+        <View style={styles.totalTopRow}>
+          <Text style={[styles.totalLabel, { color: hexWithAlpha('#FFFFFF', 0.9) }]}>
+            Total gasto {period === 'month' ? 'no mês' : 'no ano'}
+          </Text>
+          <View style={styles.totalBadge}>
+            <MaterialCommunityIcons name="wallet" size={18} color="#FFFFFF" />
+          </View>
+        </View>
+        <Text style={styles.totalValue}>{formatBRL(total)}</Text>
+        <View style={styles.totalFooter}>
+          <View style={styles.totalChip}>
+            <MaterialCommunityIcons name="receipt-text-outline" size={14} color="#FFFFFF" />
+            <Text style={styles.totalChipText}>
+              {periodExpenses.length}{' '}
+              {periodExpenses.length === 1 ? 'lançamento' : 'lançamentos'}
+            </Text>
+          </View>
+          {trend !== null && (
+            <View style={styles.totalChip}>
+              <MaterialCommunityIcons
+                name={trend > 0 ? 'trending-up' : trend < 0 ? 'trending-down' : 'trending-neutral'}
+                size={14}
+                color="#FFFFFF"
+              />
+              <Text style={styles.totalChipText}>
+                {trend > 0 ? '+' : ''}
+                {Math.round(trend * 100)}% vs {period === 'month' ? 'mês' : 'ano'} anterior
+              </Text>
+            </View>
+          )}
+        </View>
+      </LinearGradient>
 
       {/* Alertas de orçamento */}
       {alerts.map((alert) => {
@@ -119,44 +154,80 @@ export default function HomeScreen() {
         );
       })}
 
-      {/* Resumo por categoria */}
-      {byCategory.length > 0 && (
-        <View style={styles.section}>
+      {/* Limite de gastos */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Por categoria
+            Limite de gastos
           </Text>
-          {byCategory.map((item) => (
-            <View key={item.categoryId ?? 'sem'} style={styles.catRow}>
-              <CategoryIcon
-                icon={item.category?.icon ?? 'tag'}
-                color={item.category?.color ?? colors.textMuted}
-                size={38}
-              />
-              <View style={styles.catMiddle}>
-                <View style={styles.catLabelRow}>
-                  <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>
-                    {item.category?.name ?? 'Sem categoria'}
-                  </Text>
-                  <Text style={[styles.catValue, { color: colors.text }]}>
-                    {formatBRL(item.total)}
-                  </Text>
-                </View>
-                <View style={[styles.barTrack, { backgroundColor: colors.surface }]}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      {
-                        width: `${Math.max(item.percent * 100, 4)}%`,
-                        backgroundColor: item.category?.color ?? colors.primary,
-                      },
-                    ]}
-                  />
+          <Pressable onPress={() => router.push('/limites')} hitSlop={8}>
+            <Text style={[styles.sectionAction, { color: colors.primary }]}>
+              Gerenciar
+            </Text>
+          </Pressable>
+        </View>
+
+        {periodBudgets.length === 0 ? (
+          <Pressable
+            onPress={() => router.push('/limites')}
+            style={[styles.budgetCta, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
+            <View style={[styles.ctaIcon, { backgroundColor: hexWithAlpha(colors.warning, 0.16) }]}>
+              <MaterialCommunityIcons name="bell-plus" size={22} color={colors.warning} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.ctaTitle, { color: colors.text }]}>
+                Defina um limite
+              </Text>
+              <Text style={[styles.ctaText, { color: colors.textMuted }]}>
+                Receba alertas ao se aproximar do teto de gastos.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
+          </Pressable>
+        ) : (
+          periodBudgets.map((b) => {
+            const barColor =
+              b.level === 'exceeded'
+                ? colors.danger
+                : b.level === 'warning'
+                  ? colors.warning
+                  : colors.success;
+            return (
+              <View key={b.budget.id} style={styles.catRow}>
+                {b.category ? (
+                  <CategoryIcon icon={b.category.icon} color={b.category.color} size={38} />
+                ) : (
+                  <View style={[styles.globalIcon, { backgroundColor: colors.primarySoft }]}>
+                    <MaterialCommunityIcons name="earth" size={20} color={colors.primary} />
+                  </View>
+                )}
+                <View style={styles.catMiddle}>
+                  <View style={styles.catLabelRow}>
+                    <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>
+                      {b.category?.name ?? 'Limite geral'}
+                    </Text>
+                    <Text style={[styles.catValue, { color: colors.text }]}>
+                      {formatBRL(b.spent)} / {formatBRL(b.budget.limit_amount)}
+                    </Text>
+                  </View>
+                  <View style={[styles.barTrack, { backgroundColor: colors.surface }]}>
+                    <View
+                      style={[
+                        styles.barFill,
+                        {
+                          width: `${Math.min(Math.max(b.ratio * 100, 3), 100)}%`,
+                          backgroundColor: barColor,
+                        },
+                      ]}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
-        </View>
-      )}
+            );
+          })
+        )}
+      </View>
 
       {periodExpenses.length > 0 && (
         <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 8 }]}>
@@ -244,9 +315,32 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  totalTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   totalLabel: { fontSize: 15, fontWeight: '500' },
-  totalValue: { fontSize: 40, fontWeight: '800', marginVertical: 4 },
-  totalCount: { fontSize: 14 },
+  totalBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  totalValue: { fontSize: 42, fontWeight: '800', marginVertical: 6, color: '#FFFFFF' },
+  totalFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  totalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  totalChipText: { fontSize: 12.5, fontWeight: '600', color: '#FFFFFF' },
   alert: {
     flexDirection: 'row',
     gap: 12,
@@ -258,7 +352,37 @@ const styles = StyleSheet.create({
   alertTitle: { fontSize: 15, fontWeight: '700' },
   alertText: { fontSize: 13, marginTop: 2 },
   section: { gap: 12 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
+  sectionAction: { fontSize: 14, fontWeight: '700' },
+  budgetCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  ctaIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaTitle: { fontSize: 15, fontWeight: '700' },
+  ctaText: { fontSize: 13, marginTop: 2 },
+  globalIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   catRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   catMiddle: { flex: 1, gap: 6 },
   catLabelRow: { flexDirection: 'row', justifyContent: 'space-between' },

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppIcon } from '../../src/components/AppIcon';
 import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useData } from '../../src/context/DataContext';
@@ -96,7 +97,7 @@ export default function CategoriasScreen() {
             onPress={() => router.push({ pathname: '/categoria', params: { id: sub.id } })}
             style={[styles.subChip, { backgroundColor: hexWithAlpha(item.color, 0.12) }]}
           >
-            <MaterialCommunityIcons name={sub.icon} size={15} color={item.color} />
+            <AppIcon icon={sub.icon} size={15} color={item.color} />
             <Text style={[styles.subChipText, { color: colors.text }]}>{sub.name}</Text>
           </Pressable>
         ))}

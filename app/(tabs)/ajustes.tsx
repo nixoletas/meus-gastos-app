@@ -1,26 +1,48 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { useAuth } from '../../src/context/AuthContext';
-import { useData } from '../../src/context/DataContext';
 import { ThemePreference, useTheme } from '../../src/theme/ThemeContext';
-import { tapLight } from '../../src/utils/haptics';
+import { notifyWarning, tapLight } from '../../src/utils/haptics';
 
 export default function AjustesScreen() {
   const { colors, preference, setPreference } = useTheme();
-  const { session, signOut } = useAuth();
-  const { budgets } = useData();
-  const router = useRouter();
+  const { session, signOut, deleteAccount } = useAuth();
   const insets = useSafeAreaInsets();
+  const [deleting, setDeleting] = useState(false);
 
   const themeOptions: { key: ThemePreference; label: string; icon: any }[] = [
     { key: 'light', label: 'Claro', icon: 'white-balance-sunny' },
     { key: 'dark', label: 'Escuro', icon: 'weather-night' },
     { key: 'system', label: 'Sistema', icon: 'cellphone-cog' },
   ];
+
+  async function runDelete() {
+    setDeleting(true);
+    const { error } = await deleteAccount();
+    setDeleting(false);
+    if (error) {
+      notifyWarning();
+      if (Platform.OS === 'web') window.alert(error);
+      else Alert.alert('Erro', error);
+    }
+    // Em caso de sucesso, o signOut redireciona automaticamente para o login.
+  }
+
+  function confirmDelete() {
+    const msg =
+      'Tem certeza que deseja excluir sua conta? Todos os seus gastos, categorias e limites serão apagados permanentemente. Esta ação não pode ser desfeita.';
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(msg)) runDelete();
+      return;
+    }
+    Alert.alert('Excluir conta', msg, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Excluir conta', style: 'destructive', onPress: runDelete },
+    ]);
+  }
 
   return (
     <ScrollView
@@ -70,30 +92,6 @@ export default function AjustesScreen() {
         </View>
       </View>
 
-      {/* Orçamentos / alertas */}
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-        LIMITES E ALERTAS
-      </Text>
-      <Pressable
-        onPress={() => router.push('/orcamentos')}
-        style={[styles.card, styles.linkRow, { backgroundColor: colors.card }]}
-      >
-        <View style={[styles.linkIcon, { backgroundColor: hexWithAlpha(colors.warning, 0.16) }]}>
-          <MaterialCommunityIcons name="bell-alert" size={22} color={colors.warning} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.linkTitle, { color: colors.text }]}>
-            Limites de gasto
-          </Text>
-          <Text style={[styles.linkSub, { color: colors.textMuted }]}>
-            {budgets.length === 0
-              ? 'Defina alertas de gasto excessivo'
-              : `${budgets.length} ${budgets.length === 1 ? 'limite ativo' : 'limites ativos'}`}
-          </Text>
-        </View>
-        <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
-      </Pressable>
-
       {/* Conta */}
       <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>CONTA</Text>
       <View style={[styles.card, { backgroundColor: colors.card, gap: 4 }]}>
@@ -113,11 +111,34 @@ export default function AjustesScreen() {
 
         <Pressable
           onPress={signOut}
-          style={[styles.logoutBtn, { backgroundColor: colors.dangerSoft }]}
+          style={[styles.logoutBtn, { backgroundColor: colors.surface }]}
         >
-          <MaterialCommunityIcons name="logout" size={20} color={colors.danger} />
-          <Text style={[styles.logoutText, { color: colors.danger }]}>Sair</Text>
+          <MaterialCommunityIcons name="logout" size={20} color={colors.text} />
+          <Text style={[styles.logoutText, { color: colors.text }]}>Sair</Text>
         </Pressable>
+      </View>
+
+      {/* Zona de perigo */}
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>ZONA DE PERIGO</Text>
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <Pressable
+          onPress={confirmDelete}
+          disabled={deleting}
+          style={[styles.deleteBtn, { backgroundColor: colors.dangerSoft }]}
+        >
+          {deleting ? (
+            <ActivityIndicator color={colors.danger} />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="account-remove" size={20} color={colors.danger} />
+              <Text style={[styles.deleteText, { color: colors.danger }]}>Excluir conta</Text>
+            </>
+          )}
+        </Pressable>
+        <Text style={[styles.deleteHint, { color: colors.textMuted }]}>
+          Apaga permanentemente sua conta e todos os dados (gastos, categorias e
+          limites).
+        </Text>
       </View>
 
       <Text style={[styles.footerNote, { color: colors.textMuted }]}>
@@ -156,7 +177,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   themeText: { fontSize: 14, fontWeight: '600' },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   linkIcon: {
     width: 42,
     height: 42,
@@ -176,5 +196,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   logoutText: { fontSize: 16, fontWeight: '700' },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: 12,
+  },
+  deleteText: { fontSize: 16, fontWeight: '700' },
+  deleteHint: { fontSize: 13, marginTop: 10, lineHeight: 19, textAlign: 'center' },
   footerNote: { textAlign: 'center', marginTop: 30, fontSize: 13 },
 });

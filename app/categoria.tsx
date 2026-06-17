@@ -17,7 +17,7 @@ import { ColorPicker } from '../src/components/ColorPicker';
 import { IconPicker } from '../src/components/IconPicker';
 import { PressableScale } from '../src/components/PressableScale';
 import { useData } from '../src/context/DataContext';
-import { IconName } from '../src/data/icons';
+import { AppIconName } from '../src/data/icons';
 import { useTheme } from '../src/theme/ThemeContext';
 import { notifySuccess, notifyWarning } from '../src/utils/haptics';
 
@@ -32,7 +32,7 @@ export default function CategoriaScreen() {
   const isSub = !!(params.parentId || editing?.parent_id);
 
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState<IconName>('tag');
+  const [icon, setIcon] = useState<AppIconName>('tag');
   const [color, setColor] = useState(parent?.color ?? '#0EA5A4');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);

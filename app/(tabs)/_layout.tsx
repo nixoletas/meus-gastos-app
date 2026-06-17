@@ -32,9 +32,18 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Início',
+            title: 'Home',
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
+              <MaterialCommunityIcons name="home" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="graficos"
+          options={{
+            title: 'Gráficos',
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="chart-donut" size={size} color={color} />
             ),
           }}
         />
@@ -44,6 +53,15 @@ export default function TabsLayout() {
             title: 'Categorias',
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="shape" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="limites"
+          options={{
+            title: 'Limites',
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="bell-alert" size={size} color={color} />
             ),
           }}
         />

@@ -19,12 +19,18 @@ Expo + React Native Web.
 - 🎉 **Dopamina a cada gasto**: animação de comemoração + vibração (haptics).
 - 🗂️ **Categorias e subcategorias** com **ícones bonitos e busca** — já vêm
   várias criadas (Alimentação, Transporte, Moradia, Saúde, Lazer...).
+- 📺 **Categoria "Assinaturas"** com os **logos reais** dos principais serviços
+  (Netflix, Spotify, Uber, iFood, Disney+, Amazon Prime, Apple Music, Google,
+  Microsoft 365, HBO Max, PlayStation, e mais).
 - 🔎 **Busca** de categorias e subcategorias.
+- 📊 **Gráficos**: gráfico de pizza (donut) com os gastos por categoria, com
+  navegação **mensal** e **anual**.
 - 📅 **Controle no tempo**: visão **mensal** e **anual**, com navegação entre
   períodos.
-- 🚨 **Alertas de gasto excessivo**: defina limites (gerais ou por categoria) e
-  o app avisa ao chegar a 80% e ao ultrapassar.
+- 🚨 **Alertas de gasto excessivo**: aba **Meus Limites** para definir tetos
+  (gerais ou por categoria) — o app avisa ao chegar a 80% e ao ultrapassar.
 - 🌗 **Tema claro e escuro** (ou automático, seguindo o sistema).
+- 🗑️ **Excluir conta** a qualquer momento (apaga todos os dados).
 
 ---
 
@@ -60,6 +66,10 @@ npm install
 > Se você abrir o app sem configurar o `.env`, ele mostra uma tela explicando
 > exatamente esses passos.
 
+> **Atualizando um banco já existente?** O `schema.sql` é idempotente — pode
+> rodar de novo com segurança. Ele inclui a função `delete_account()`, usada
+> pela opção "Excluir conta".
+
 > **Dica:** em **Authentication → Providers → Email**, você pode desativar
 > "Confirm email" durante o desenvolvimento para entrar logo após o cadastro.
 
@@ -94,11 +104,12 @@ app/                       # Rotas (expo-router)
   config.tsx               # Tela de "falta configurar o Supabase"
   novo.tsx                 # Lançar / editar gasto (com a comemoração)
   categoria.tsx            # Criar / editar categoria ou subcategoria
-  orcamentos.tsx           # Limites de gasto e alertas
   (tabs)/
-    index.tsx              # Início: total do período, por categoria, lista
+    index.tsx              # Home: total do período, limites de gasto, lista
+    graficos.tsx           # Gráfico de pizza por categoria (mês/ano)
     categorias.tsx         # Gerenciar e buscar categorias/subcategorias
-    ajustes.tsx            # Tema, limites, conta
+    limites.tsx            # Meus Limites: tetos de gasto e alertas
+    ajustes.tsx            # Tema, conta, excluir conta
 
 src/
   components/              # Componentes reutilizáveis (ícones, pickers, etc.)
