@@ -7,7 +7,6 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -25,6 +24,8 @@ const PARTICLE_COLORS = [
   '#3B82F6',
 ];
 
+const PARTICLE_COUNT = 16;
+
 type Props = {
   visible: boolean;
   amountLabel: string;
@@ -34,17 +35,17 @@ type Props = {
 /** Partícula individual que sai voando do centro. */
 function Particle({ index, play }: { index: number; play: boolean }) {
   const progress = useSharedValue(0);
-  const angle = (index / 14) * Math.PI * 2;
-  const distance = 90 + (index % 3) * 28;
+  const angle = (index / PARTICLE_COUNT) * Math.PI * 2;
+  const distance = 96 + (index % 3) * 30;
   const color = PARTICLE_COLORS[index % PARTICLE_COLORS.length];
 
   useEffect(() => {
     if (play) {
       progress.value = 0;
-      progress.value = withTiming(1, {
-        duration: 650,
-        easing: Easing.out(Easing.cubic),
-      });
+      progress.value = withDelay(
+        120,
+        withTiming(1, { duration: 720, easing: Easing.out(Easing.cubic) })
+      );
     }
   }, [play]);
 
@@ -53,7 +54,7 @@ function Particle({ index, play }: { index: number; play: boolean }) {
     transform: [
       { translateX: Math.cos(angle) * distance * progress.value },
       { translateY: Math.sin(angle) * distance * progress.value },
-      { scale: 1 - progress.value * 0.4 },
+      { scale: 1 - progress.value * 0.5 },
     ],
   }));
 
@@ -61,7 +62,7 @@ function Particle({ index, play }: { index: number; play: boolean }) {
     <Animated.View
       style={[
         styles.particle,
-        { backgroundColor: color, borderRadius: index % 2 ? 3 : 6 },
+        { backgroundColor: color, borderRadius: index % 2 ? 3 : 7 },
         style,
       ]}
     />
@@ -71,38 +72,49 @@ function Particle({ index, play }: { index: number; play: boolean }) {
 /** Overlay que comemora cada lançamento de gasto (feedback de dopamina). */
 export function SuccessOverlay({ visible, amountLabel, onDone }: Props) {
   const { colors } = useTheme();
+  const overlayOpacity = useSharedValue(0);
+  const ringScale = useSharedValue(0);
+  const ringOpacity = useSharedValue(0);
   const circleScale = useSharedValue(0);
   const checkScale = useSharedValue(0);
   const labelOpacity = useSharedValue(0);
-  const overlayOpacity = useSharedValue(0);
+  const contentScale = useSharedValue(1);
 
   useEffect(() => {
     if (!visible) return;
 
-    overlayOpacity.value = withTiming(1, { duration: 120 });
-    circleScale.value = withSpring(1, { damping: 9, stiffness: 140 });
-    checkScale.value = withDelay(
-      90,
-      withSpring(1, { damping: 8, stiffness: 180 })
-    );
-    labelOpacity.value = withDelay(160, withTiming(1, { duration: 200 }));
+    // Cobre a tela rapidamente (fundo sólido).
+    overlayOpacity.value = withTiming(1, { duration: 90 });
 
-    // Fecha sozinho após a comemoração.
-    overlayOpacity.value = withDelay(
-      1050,
-      withTiming(0, { duration: 220 }, (finished) => {
-        if (finished) {
-          runOnJS(onDone)();
-        }
+    // Onda/anel que "explode" atrás do círculo.
+    ringScale.value = 0;
+    ringOpacity.value = 0.45;
+    ringScale.value = withTiming(2.4, { duration: 620, easing: Easing.out(Easing.cubic) });
+    ringOpacity.value = withTiming(0, { duration: 620 });
+
+    // Círculo + check entram com mola.
+    circleScale.value = withSpring(1, { damping: 9, stiffness: 150 });
+    checkScale.value = withDelay(100, withSpring(1, { damping: 7, stiffness: 190 }));
+    labelOpacity.value = withDelay(180, withTiming(1, { duration: 220 }));
+
+    // Ao final, dá um leve "respiro" e fecha — mantendo o overlay OPACO,
+    // de modo que o modal desça já coberto (sem flash do formulário).
+    contentScale.value = withDelay(
+      980,
+      withSpring(1.06, { damping: 10, stiffness: 200 }, (finished) => {
+        if (finished) runOnJS(onDone)();
       })
-    );
-    circleScale.value = withDelay(
-      1050,
-      withSequence(withTiming(circleScale.value, { duration: 0 }))
     );
   }, [visible]);
 
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: ringOpacity.value,
+    transform: [{ scale: ringScale.value }],
+  }));
+  const contentStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: contentScale.value }],
+  }));
   const circleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: circleScale.value }],
   }));
@@ -111,38 +123,44 @@ export function SuccessOverlay({ visible, amountLabel, onDone }: Props) {
   }));
   const labelStyle = useAnimatedStyle(() => ({
     opacity: labelOpacity.value,
-    transform: [{ translateY: (1 - labelOpacity.value) * 10 }],
+    transform: [{ translateY: (1 - labelOpacity.value) * 12 }],
   }));
 
   if (!visible) return null;
 
   return (
     <Animated.View
-      pointerEvents="none"
-      style={[styles.overlay, overlayStyle, { backgroundColor: colors.background + 'F2' }]}
+      style={[styles.overlay, overlayStyle, { backgroundColor: colors.background }]}
     >
-      <View style={styles.center}>
+      <Animated.View style={[styles.center, contentStyle]}>
+        {/* Partículas */}
         <View style={styles.particleWrap}>
-          {Array.from({ length: 14 }).map((_, i) => (
+          {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
             <Particle key={i} index={i} play={visible} />
           ))}
         </View>
 
+        {/* Anel de explosão */}
+        <Animated.View
+          style={[styles.ring, { borderColor: colors.success }, ringStyle]}
+        />
+
+        {/* Círculo com check */}
         <Animated.View
           style={[styles.circle, { backgroundColor: colors.success }, circleStyle]}
         >
           <Animated.View style={checkStyle}>
-            <MaterialCommunityIcons name="check-bold" size={54} color="#FFFFFF" />
+            <MaterialCommunityIcons name="check-bold" size={56} color="#FFFFFF" />
           </Animated.View>
         </Animated.View>
 
         <Animated.View style={[styles.labelWrap, labelStyle]}>
           <Text style={[styles.added, { color: colors.textMuted }]}>
-            Gasto registrado
+            Gasto registrado 🎉
           </Text>
           <Text style={[styles.amount, { color: colors.text }]}>{amountLabel}</Text>
         </Animated.View>
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -163,9 +181,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    top: 30,
   },
-  particle: { position: 'absolute', width: 12, height: 12 },
+  particle: { position: 'absolute', width: 13, height: 13 },
+  ring: {
+    position: 'absolute',
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    borderWidth: 4,
+  },
   circle: {
     width: 108,
     height: 108,
@@ -173,7 +197,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  labelWrap: { marginTop: 22, alignItems: 'center' },
-  added: { fontSize: 15, fontWeight: '500' },
-  amount: { fontSize: 30, fontWeight: '800', marginTop: 2 },
+  labelWrap: { marginTop: 24, alignItems: 'center' },
+  added: { fontSize: 15, fontWeight: '600' },
+  amount: { fontSize: 32, fontWeight: '800', marginTop: 4 },
 });

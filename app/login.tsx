@@ -96,6 +96,10 @@ export default function LoginScreen() {
                 placeholder="Senha"
                 placeholderTextColor={colors.textMuted}
                 secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete={isSignup ? 'new-password' : 'password'}
+                textContentType={isSignup ? 'newPassword' : 'password'}
                 style={[styles.input, { color: colors.text }]}
                 onSubmitEditing={handleSubmit}
               />

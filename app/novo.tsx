@@ -408,7 +408,8 @@ export default function NovoGastoScreen() {
         visible={showSuccess}
         amountLabel={formatBRL(amount)}
         onDone={() => {
-          setShowSuccess(false);
+          // Não desmontamos o overlay aqui: ele continua cobrindo a tela
+          // enquanto o modal desce, evitando o "flash" do formulário.
           router.back();
         }}
       />
