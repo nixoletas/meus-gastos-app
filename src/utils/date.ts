@@ -98,3 +98,30 @@ export function relativeDayLabel(iso: string): string {
   if (diffDays === 1) return 'Ontem';
   return formatDayMonth(iso);
 }
+
+/** Formata uma data ISO como "18/06". */
+export function formatShortDate(iso: string): string {
+  const d = fromISODate(iso);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}`;
+}
+
+/**
+ * Cabeçalho de grupo de data, ex.: "18/06 (hoje)", "17/06 (ontem)",
+ * "08/06 (semana passada)". Retorna a data curta + qualificador relativo.
+ */
+export function dateHeaderLabel(iso: string): string {
+  const d = fromISODate(iso);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((today.getTime() - d.getTime()) / 86400000);
+
+  let qualifier = '';
+  if (diffDays === 0) qualifier = 'hoje';
+  else if (diffDays === 1) qualifier = 'ontem';
+  else if (diffDays >= 2 && diffDays <= 6) qualifier = 'essa semana';
+  else if (diffDays >= 7 && diffDays <= 14) qualifier = 'semana passada';
+
+  return qualifier ? `${formatShortDate(iso)} (${qualifier})` : formatShortDate(iso);
+}

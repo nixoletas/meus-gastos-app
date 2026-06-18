@@ -4,9 +4,9 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Platform,
   Pressable,
+  SectionList,
   StyleSheet,
   Text,
   View,
@@ -24,7 +24,9 @@ import {
   totalForPeriod,
 } from '../../src/utils/analytics';
 import { formatBRL } from '../../src/utils/currency';
-import { Period, shiftPeriod } from '../../src/utils/date';
+import { dateHeaderLabel, Period, shiftPeriod } from '../../src/utils/date';
+
+type DaySection = { title: string; key: string; data: Expense[] };
 
 export default function HomeScreen() {
   const { colors, isDark } = useTheme();
@@ -37,11 +39,29 @@ export default function HomeScreen() {
 
   const [period, setPeriod] = useState<Period>('month');
   const [refDate, setRefDate] = useState(new Date());
+  const [hideValue, setHideValue] = useState(false);
 
   const periodExpenses = useMemo(
     () => expensesForPeriod(expenses, refDate, period),
     [expenses, refDate, period]
   );
+
+  // Agrupa os lançamentos do período por data (mais recente primeiro).
+  // periodExpenses já vem ordenado por occurred_at desc.
+  const sections = useMemo<DaySection[]>(() => {
+    const groups: DaySection[] = [];
+    const byDate = new Map<string, DaySection>();
+    for (const e of periodExpenses) {
+      let section = byDate.get(e.occurred_at);
+      if (!section) {
+        section = { title: dateHeaderLabel(e.occurred_at), key: e.occurred_at, data: [] };
+        byDate.set(e.occurred_at, section);
+        groups.push(section);
+      }
+      section.data.push(e);
+    }
+    return groups;
+  }, [periodExpenses]);
   const total = useMemo(
     () => totalForPeriod(expenses, refDate, period),
     [expenses, refDate, period]
@@ -92,11 +112,21 @@ export default function HomeScreen() {
           <Text style={[styles.totalLabel, { color: hexWithAlpha('#FFFFFF', 0.9) }]}>
             Total gasto {period === 'month' ? 'no mês' : 'no ano'}
           </Text>
-          <View style={styles.totalBadge}>
-            <MaterialCommunityIcons name="wallet" size={18} color="#FFFFFF" />
-          </View>
+          <Pressable
+            onPress={() => setHideValue((v) => !v)}
+            hitSlop={10}
+            style={styles.totalBadge}
+          >
+            <MaterialCommunityIcons
+              name={hideValue ? 'eye-off' : 'eye'}
+              size={18}
+              color="#FFFFFF"
+            />
+          </Pressable>
         </View>
-        <Text style={styles.totalValue}>{formatBRL(total)}</Text>
+        <Text style={styles.totalValue}>
+          {hideValue ? '••••••' : `${total > 0 ? '− ' : ''}${formatBRL(total)}`}
+        </Text>
         <View style={styles.totalFooter}>
           <View style={styles.totalChip}>
             <MaterialCommunityIcons name="receipt-text-outline" size={14} color="#FFFFFF" />
@@ -272,16 +302,25 @@ export default function HomeScreen() {
     />
   );
 
+  const renderSectionHeader = ({ section }: { section: DaySection }) => (
+    <Text style={[styles.dateHeader, { color: colors.textMuted }]}>
+      {section.title}
+    </Text>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <FlatList
-        data={periodExpenses}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+        SectionSeparatorComponent={() => <View style={{ height: 6 }} />}
+        stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -329,7 +368,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  totalValue: { fontSize: 42, fontWeight: '800', marginVertical: 6, color: '#FFFFFF' },
+  totalValue: { fontSize: 30, fontWeight: '800', marginVertical: 5, color: '#FFFFFF' },
   totalFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   totalChip: {
     flexDirection: 'row',
@@ -358,6 +397,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
+  dateHeader: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    marginTop: 6,
+    marginBottom: 6,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+  },
   sectionAction: { fontSize: 14, fontWeight: '700' },
   budgetCta: {
     flexDirection: 'row',
