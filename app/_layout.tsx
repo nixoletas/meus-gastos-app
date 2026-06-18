@@ -9,11 +9,13 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { DataProvider } from '../src/context/DataContext';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
+import { APP_FONTS } from '../src/theme/typography';
 
 /** Redireciona entre as telas de login e o app conforme a sessão. */
 function AuthGate() {
@@ -108,6 +110,13 @@ function ThemedStatusBar() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts(APP_FONTS);
+
+  // Evita o "flash" da fonte do sistema antes da Space Grotesk carregar.
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: '#0B1120' }} />;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

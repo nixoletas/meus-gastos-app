@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   header: { gap: 16, paddingTop: 8, paddingBottom: 12 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   greeting: { fontSize: 15 },
-  appName: { fontSize: 24, fontWeight: '800' },
+  appName: { fontSize: 25, fontWeight: '800', letterSpacing: -0.8 },
   totalCard: {
     borderRadius: 22,
     padding: 22,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  totalValue: { fontSize: 30, fontWeight: '800', marginVertical: 5, color: '#FFFFFF' },
+  totalValue: { fontSize: 32, fontWeight: '800', marginVertical: 5, color: '#FFFFFF', letterSpacing: -1 },
   totalFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   totalChip: {
     flexDirection: 'row',
