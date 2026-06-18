@@ -1,16 +1,19 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React,
+  { useMemo,
+  useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
   Pressable,
   SectionList,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Text } from '../../src/theme/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
 import { ExpenseRow } from '../../src/components/ExpenseRow';

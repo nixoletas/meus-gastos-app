@@ -1,6 +1,10 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet,
+  View,
+} from 'react-native';
+import { Text } from '../theme/typography';
 import { Category, Expense } from '../types';
 import { useTheme } from '../theme/ThemeContext';
 import { formatBRL } from '../utils/currency';

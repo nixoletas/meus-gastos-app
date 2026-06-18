@@ -1,6 +1,12 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import {
+  MaterialCommunityIcons } from '@expo/vector-icons';
+import React,
+  { useEffect } from 'react';
+import { Dimensions,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { Text } from '../theme/typography';
 import Animated, {
   Easing,
   runOnJS,

@@ -1,16 +1,21 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams,
+  useRouter } from 'expo-router';
+import React,
+  { useEffect,
+  useMemo,
+  useRef,
+  useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import { Text, TextInput } from '../src/theme/typography';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -52,7 +57,7 @@ export default function NovoGastoScreen() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const amountRef = useRef<TextInput>(null);
+  const amountRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   // Pequena animação de "pulo" no valor a cada dígito digitado.

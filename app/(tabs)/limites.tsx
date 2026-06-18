@@ -1,15 +1,18 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useRef, useState } from 'react';
+import {
+  MaterialCommunityIcons } from '@expo/vector-icons';
+import React,
+  { useMemo,
+  useRef,
+  useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import { Text, TextInput } from '../../src/theme/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../src/components/AppIcon';
 import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';

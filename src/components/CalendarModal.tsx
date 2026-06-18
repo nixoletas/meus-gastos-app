@@ -1,6 +1,13 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  MaterialCommunityIcons } from '@expo/vector-icons';
+import React,
+  { useState } from 'react';
+import { Modal,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { Text } from '../theme/typography';
 import { useTheme } from '../theme/ThemeContext';
 import { monthName, toISODate } from '../utils/date';
 

@@ -1,6 +1,10 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import {
+  MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams,
+  useRouter } from 'expo-router';
+import React,
+  { useEffect,
+  useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -8,10 +12,9 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import { Text, TextInput } from '../src/theme/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryIcon } from '../src/components/CategoryIcon';
 import { ColorPicker } from '../src/components/ColorPicker';

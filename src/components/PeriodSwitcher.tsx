@@ -1,6 +1,11 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { Text } from '../theme/typography';
 import { useTheme } from '../theme/ThemeContext';
 import { Period, periodLabel, shiftPeriod } from '../utils/date';
 

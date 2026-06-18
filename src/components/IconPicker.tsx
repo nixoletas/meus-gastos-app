@@ -1,14 +1,16 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import {
+  MaterialCommunityIcons } from '@expo/vector-icons';
+import React,
+  { useMemo,
+  useState } from 'react';
 import {
   FlatList,
   Modal,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import { Text, TextInput } from '../theme/typography';
 import { AppIconName, searchIcons } from '../data/icons';
 import { useTheme } from '../theme/ThemeContext';
 import { AppIcon } from './AppIcon';
