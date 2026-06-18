@@ -5,7 +5,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useTheme } from '../../src/theme/ThemeContext';
-import { tapMedium } from '../../src/utils/haptics';
+import { tapMedium } from '../../src/utils/sound';
 
 export default function TabsLayout() {
   const { colors } = useTheme();

@@ -19,7 +19,7 @@ import { useTheme } from '../../src/theme/ThemeContext';
 import { evaluateBudgets } from '../../src/utils/analytics';
 import { formatBRL, maskCurrencyInput, rawToReais } from '../../src/utils/currency';
 import { Period } from '../../src/utils/date';
-import { notifySuccess, notifyWarning, tapLight } from '../../src/utils/haptics';
+import { notifySuccess, notifyWarning, playType, tapLight } from '../../src/utils/sound';
 
 export default function LimitesScreen() {
   const { colors } = useTheme();
@@ -203,7 +203,10 @@ export default function LimitesScreen() {
           <Text style={[styles.currency, { color: colors.textMuted }]}>R$</Text>
           <TextInput
             value={maskCurrencyInput(raw)}
-            onChangeText={(t) => setRaw(t.replace(/\D/g, '').slice(0, 11))}
+            onChangeText={(t) => {
+              setRaw(t.replace(/\D/g, '').slice(0, 11));
+              playType();
+            }}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
             keyboardType="number-pad"
             style={[styles.amountInput, { color: colors.text }]}

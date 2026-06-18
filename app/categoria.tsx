@@ -20,7 +20,7 @@ import { PressableScale } from '../src/components/PressableScale';
 import { useData } from '../src/context/DataContext';
 import { AppIconName } from '../src/data/icons';
 import { useTheme } from '../src/theme/ThemeContext';
-import { notifySuccess, notifyWarning } from '../src/utils/haptics';
+import { notifySuccess, notifyWarning, playType } from '../src/utils/sound';
 
 export default function CategoriaScreen() {
   const { colors } = useTheme();
@@ -148,7 +148,10 @@ export default function CategoriaScreen() {
         <Text style={[styles.label, { color: colors.text }]}>Nome</Text>
         <TextInput
           value={name}
-          onChangeText={setName}
+          onChangeText={(t) => {
+            setName(t);
+            playType();
+          }}
           placeholder={isSub ? 'Ex.: Mercado' : 'Ex.: Alimentação'}
           placeholderTextColor={colors.textMuted}
           style={[

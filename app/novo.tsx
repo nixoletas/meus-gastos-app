@@ -28,7 +28,7 @@ import { useData } from '../src/context/DataContext';
 import { useTheme } from '../src/theme/ThemeContext';
 import { formatBRL, maskCurrencyInput, rawToReais, reaisToRaw } from '../src/utils/currency';
 import { fromISODate, relativeDayLabel, toISODate } from '../src/utils/date';
-import { notifySuccess, notifyWarning, tapLight } from '../src/utils/haptics';
+import { notifySuccess, notifyWarning, playType, tapLight } from '../src/utils/sound';
 
 export default function NovoGastoScreen() {
   const { colors } = useTheme();
@@ -100,6 +100,7 @@ export default function NovoGastoScreen() {
 
   function handleAmountChange(text: string) {
     setRaw(text.replace(/\D/g, '').slice(0, 11));
+    playType();
     // Pulso sutil (e curto, sem salto) para suavizar a digitação do valor.
     amountScale.value = withSequence(
       withTiming(1.03, { duration: 50, easing: Easing.out(Easing.quad) }),
@@ -365,7 +366,10 @@ export default function NovoGastoScreen() {
           <Text style={[styles.label, { color: colors.text }]}>Notas</Text>
           <TextInput
             value={note}
-            onChangeText={setNote}
+            onChangeText={(t) => {
+              setNote(t);
+              playType();
+            }}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
             placeholder="sushi com a família"
             placeholderTextColor={colors.textMuted}

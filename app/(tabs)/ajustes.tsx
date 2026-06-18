@@ -6,7 +6,7 @@ import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useAuth } from '../../src/context/AuthContext';
 import { ThemePreference, useTheme } from '../../src/theme/ThemeContext';
-import { notifyWarning, tapLight } from '../../src/utils/haptics';
+import { notifyWarning, tapLight } from '../../src/utils/sound';
 
 export default function AjustesScreen() {
   const { colors, preference, setPreference } = useTheme();

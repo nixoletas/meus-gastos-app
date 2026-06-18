@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { monthName, toISODate } from '../utils/date';
-import { tapLight } from '../utils/haptics';
+import { tapLight } from '../utils/sound';
 
 type Props = {
   visible: boolean;

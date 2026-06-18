@@ -3,7 +3,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Period, periodLabel, shiftPeriod } from '../utils/date';
-import { tapLight } from '../utils/haptics';
+import { tapLight } from '../utils/sound';
 
 type Props = {
   period: Period;

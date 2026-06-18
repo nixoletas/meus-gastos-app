@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PressableScale } from '../src/components/PressableScale';
 import { useAuth } from '../src/context/AuthContext';
 import { useTheme } from '../src/theme/ThemeContext';
-import { notifySuccess, notifyWarning } from '../src/utils/haptics';
+import { notifySuccess, notifyWarning } from '../src/utils/sound';
 
 export default function LoginScreen() {
   const { colors } = useTheme();

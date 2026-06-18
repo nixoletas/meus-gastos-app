@@ -6,7 +6,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { tapLight } from '../utils/haptics';
+import { tapLight } from '../utils/sound';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 

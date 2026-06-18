@@ -17,7 +17,7 @@ import { useData } from '../../src/context/DataContext';
 import { normalize } from '../../src/data/icons';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { CategoryWithSubs } from '../../src/types';
-import { tapLight } from '../../src/utils/haptics';
+import { playType, tapLight } from '../../src/utils/sound';
 
 export default function CategoriasScreen() {
   const { colors } = useTheme();
@@ -101,7 +101,10 @@ export default function CategoriasScreen() {
           <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
           <TextInput
             value={query}
-            onChangeText={setQuery}
+            onChangeText={(t) => {
+              setQuery(t);
+              playType();
+            }}
             placeholder="Buscar categoria ou subcategoria"
             placeholderTextColor={colors.textMuted}
             style={[styles.searchInput, { color: colors.text }]}
