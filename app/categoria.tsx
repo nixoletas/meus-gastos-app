@@ -20,7 +20,6 @@ import { PressableScale } from '../src/components/PressableScale';
 import { useData } from '../src/context/DataContext';
 import { AppIconName } from '../src/data/icons';
 import { useTheme } from '../src/theme/ThemeContext';
-import { notifySuccess, notifyWarning, playType } from '../src/utils/sound';
 
 export default function CategoriaScreen() {
   const { colors } = useTheme();
@@ -61,7 +60,6 @@ export default function CategoriaScreen() {
 
   async function handleSave() {
     if (!canSave) {
-      notifyWarning();
       return;
     }
     setSaving(true);
@@ -77,7 +75,6 @@ export default function CategoriaScreen() {
     } else {
       await addCategory(payload);
     }
-    notifySuccess();
     router.back();
   }
 
@@ -89,7 +86,6 @@ export default function CategoriaScreen() {
 
     const doDelete = async () => {
       await deleteCategory(editing.id);
-      notifySuccess();
       router.back();
     };
 
@@ -150,7 +146,6 @@ export default function CategoriaScreen() {
           value={name}
           onChangeText={(t) => {
             setName(t);
-            playType();
           }}
           placeholder={isSub ? 'Ex.: Mercado' : 'Ex.: Alimentação'}
           placeholderTextColor={colors.textMuted}

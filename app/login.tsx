@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PressableScale } from '../src/components/PressableScale';
 import { useAuth } from '../src/context/AuthContext';
 import { useTheme } from '../src/theme/ThemeContext';
-import { notifySuccess, notifyWarning } from '../src/utils/sound';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
@@ -44,15 +43,12 @@ export default function LoginScreen() {
 
     if (err) {
       setError(err);
-      notifyWarning();
     } else if (isSignup) {
-      notifySuccess();
       setInfo(
         'Conta criada! Se a confirmação de e-mail estiver ativa no Supabase, confirme pelo link enviado.'
       );
       setMode('login');
     } else {
-      notifySuccess();
     }
   }
 

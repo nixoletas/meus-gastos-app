@@ -17,7 +17,6 @@ import { useData } from '../../src/context/DataContext';
 import { normalize } from '../../src/data/icons';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { CategoryWithSubs } from '../../src/types';
-import { playType, tapLight } from '../../src/utils/sound';
 
 export default function CategoriasScreen() {
   const { colors } = useTheme();
@@ -87,7 +86,6 @@ export default function CategoriasScreen() {
           <Text style={[styles.title, { color: colors.text }]}>Categorias</Text>
           <PressableScale
             onPress={() => {
-              tapLight();
               router.push('/categoria');
             }}
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
@@ -103,7 +101,6 @@ export default function CategoriasScreen() {
             value={query}
             onChangeText={(t) => {
               setQuery(t);
-              playType();
             }}
             placeholder="Buscar categoria ou subcategoria"
             placeholderTextColor={colors.textMuted}
@@ -131,7 +128,6 @@ export default function CategoriasScreen() {
           query.trim().length > 0 ? (
             <PressableScale
               onPress={() => {
-                tapLight();
                 router.push({ pathname: '/categoria', params: { name: query.trim() } });
               }}
               style={[styles.suggestCard, { backgroundColor: colors.card, borderColor: colors.primary }]}

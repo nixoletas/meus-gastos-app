@@ -19,7 +19,6 @@ import { useTheme } from '../../src/theme/ThemeContext';
 import { evaluateBudgets } from '../../src/utils/analytics';
 import { formatBRL, maskCurrencyInput, rawToReais } from '../../src/utils/currency';
 import { Period } from '../../src/utils/date';
-import { notifySuccess, notifyWarning, playType, tapLight } from '../../src/utils/sound';
 
 export default function LimitesScreen() {
   const { colors } = useTheme();
@@ -44,11 +43,9 @@ export default function LimitesScreen() {
 
   async function handleAdd() {
     if (!canSave) {
-      notifyWarning();
       return;
     }
     await setBudget({ category_id: categoryId, period, limit_amount: amount });
-    notifySuccess();
     setRaw('');
     setCategoryId(null);
   }
@@ -141,7 +138,6 @@ export default function LimitesScreen() {
               <Pressable
                 key={p}
                 onPress={() => {
-                  tapLight();
                   setPeriod(p);
                 }}
                 style={[styles.segmentBtn, active && { backgroundColor: colors.card }]}
@@ -159,7 +155,6 @@ export default function LimitesScreen() {
         <View style={styles.chipsWrap}>
           <Pressable
             onPress={() => {
-              tapLight();
               setCategoryId(null);
             }}
             style={[
@@ -179,7 +174,6 @@ export default function LimitesScreen() {
               <Pressable
                 key={cat.id}
                 onPress={() => {
-                  tapLight();
                   setCategoryId(cat.id);
                 }}
                 style={[
@@ -205,7 +199,6 @@ export default function LimitesScreen() {
             value={maskCurrencyInput(raw)}
             onChangeText={(t) => {
               setRaw(t.replace(/\D/g, '').slice(0, 11));
-              playType();
             }}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
             keyboardType="number-pad"

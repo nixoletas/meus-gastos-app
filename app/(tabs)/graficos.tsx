@@ -15,7 +15,6 @@ import {
 } from '../../src/utils/analytics';
 import { formatBRL } from '../../src/utils/currency';
 import { Period } from '../../src/utils/date';
-import { tapLight } from '../../src/utils/sound';
 
 export default function GraficosScreen() {
   const { colors } = useTheme();
@@ -93,7 +92,6 @@ export default function GraficosScreen() {
                     style={styles.legendHead}
                     disabled={!item.categoryId}
                     onPress={() => {
-                      tapLight();
                       setExpandedId(expanded ? null : item.categoryId);
                     }}
                   >

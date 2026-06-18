@@ -3,7 +3,6 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Period, periodLabel, shiftPeriod } from '../utils/date';
-import { tapLight } from '../utils/sound';
 
 type Props = {
   period: Period;
@@ -31,7 +30,6 @@ export function PeriodSwitcher({
             <Pressable
               key={p}
               onPress={() => {
-                tapLight();
                 onChangePeriod(p);
               }}
               style={[
@@ -57,7 +55,6 @@ export function PeriodSwitcher({
         <Pressable
           hitSlop={10}
           onPress={() => {
-            tapLight();
             onChangeDate(shiftPeriod(refDate, period, -1));
           }}
           style={[styles.arrow, { backgroundColor: colors.surface }]}
@@ -70,7 +67,6 @@ export function PeriodSwitcher({
         <Pressable
           hitSlop={10}
           onPress={() => {
-            tapLight();
             onChangeDate(shiftPeriod(refDate, period, 1));
           }}
           style={[styles.arrow, { backgroundColor: colors.surface }]}

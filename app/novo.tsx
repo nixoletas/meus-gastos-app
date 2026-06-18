@@ -28,7 +28,6 @@ import { useData } from '../src/context/DataContext';
 import { useTheme } from '../src/theme/ThemeContext';
 import { formatBRL, maskCurrencyInput, rawToReais, reaisToRaw } from '../src/utils/currency';
 import { fromISODate, relativeDayLabel, toISODate } from '../src/utils/date';
-import { notifySuccess, notifyWarning, playType, tapLight } from '../src/utils/sound';
 
 export default function NovoGastoScreen() {
   const { colors } = useTheme();
@@ -100,7 +99,6 @@ export default function NovoGastoScreen() {
 
   function handleAmountChange(text: string) {
     setRaw(text.replace(/\D/g, '').slice(0, 11));
-    playType();
     // Pulso sutil (e curto, sem salto) para suavizar a digitação do valor.
     amountScale.value = withSequence(
       withTiming(1.03, { duration: 50, easing: Easing.out(Easing.quad) }),
@@ -115,7 +113,6 @@ export default function NovoGastoScreen() {
 
   async function handleSave() {
     if (!canSave) {
-      notifyWarning();
       return;
     }
     setSaving(true);
@@ -129,15 +126,12 @@ export default function NovoGastoScreen() {
 
     if (editing) {
       await updateExpense(editing.id, payload);
-      notifySuccess();
       router.back();
     } else {
       const created = await addExpense(payload);
       if (created) {
-        notifySuccess();
         setShowSuccess(true); // dispara a comemoração
       } else {
-        notifyWarning();
         setSaving(false);
       }
     }
@@ -146,7 +140,6 @@ export default function NovoGastoScreen() {
   async function handleDelete() {
     if (!editing) return;
     await deleteExpense(editing.id);
-    notifySuccess();
     router.back();
   }
 
@@ -224,7 +217,6 @@ export default function NovoGastoScreen() {
                 <PressableScale
                   key={cat.id}
                   onPress={() => {
-                    tapLight();
                     setCategoryId(cat.id);
                     setSubcategoryId(null);
                   }}
@@ -251,7 +243,6 @@ export default function NovoGastoScreen() {
             {/* Criar nova categoria na hora */}
             <Pressable
               onPress={() => {
-                tapLight();
                 router.push('/categoria');
               }}
               style={[styles.createChip, { borderColor: colors.primary }]}
@@ -274,7 +265,6 @@ export default function NovoGastoScreen() {
                     <Pressable
                       key={sub.id}
                       onPress={() => {
-                        tapLight();
                         setSubcategoryId(active ? null : sub.id);
                       }}
                       style={[
@@ -301,7 +291,6 @@ export default function NovoGastoScreen() {
                 {/* Criar nova subcategoria na hora */}
                 <Pressable
                   onPress={() => {
-                    tapLight();
                     router.push({
                       pathname: '/categoria',
                       params: { parentId: selectedCategory.id },
@@ -327,7 +316,6 @@ export default function NovoGastoScreen() {
                 <Pressable
                   key={q.label}
                   onPress={() => {
-                    tapLight();
                     setDate(q.value);
                   }}
                   style={[
@@ -350,7 +338,6 @@ export default function NovoGastoScreen() {
             })}
             <Pressable
               onPress={() => {
-                tapLight();
                 setCalendarOpen(true);
               }}
               style={[styles.dateChip, { backgroundColor: colors.surface }]}
@@ -368,7 +355,6 @@ export default function NovoGastoScreen() {
             value={note}
             onChangeText={(t) => {
               setNote(t);
-              playType();
             }}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
             placeholder="sushi com a família"

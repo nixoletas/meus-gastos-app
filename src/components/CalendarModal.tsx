@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { monthName, toISODate } from '../utils/date';
-import { tapLight } from '../utils/sound';
 
 type Props = {
   visible: boolean;
@@ -42,7 +41,6 @@ export function CalendarModal({ visible, selected, maxDate, onSelect, onClose }:
   const maxISO = toISODate(max);
 
   function shiftMonth(delta: number) {
-    tapLight();
     setView(new Date(year, month + delta, 1));
   }
 
@@ -89,7 +87,6 @@ export function CalendarModal({ visible, selected, maxDate, onSelect, onClose }:
                   key={day}
                   disabled={isFuture}
                   onPress={() => {
-                    tapLight();
                     onSelect(date);
                     onClose();
                   }}
@@ -123,7 +120,6 @@ export function CalendarModal({ visible, selected, maxDate, onSelect, onClose }:
 
           <Pressable
             onPress={() => {
-              tapLight();
               onSelect(new Date());
               onClose();
             }}

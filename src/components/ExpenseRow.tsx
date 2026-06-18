@@ -32,7 +32,6 @@ export function ExpenseRow({ expense, category, subcategory, onPress }: Props) {
   return (
     <PressableScale
       onPress={onPress}
-      haptic={false}
       style={[styles.row, { backgroundColor: colors.card }]}
     >
       <CategoryIcon icon={icon} color={color} size={44} />

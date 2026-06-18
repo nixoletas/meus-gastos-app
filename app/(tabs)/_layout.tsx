@@ -5,7 +5,6 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useTheme } from '../../src/theme/ThemeContext';
-import { tapMedium } from '../../src/utils/sound';
 
 export default function TabsLayout() {
   const { colors } = useTheme();
@@ -84,7 +83,6 @@ export default function TabsLayout() {
       {/* Botão flutuante para lançar um gasto rapidamente, presente em todas as abas. */}
       <PressableScale
         onPress={() => {
-          tapMedium();
           router.push('/novo');
         }}
         scaleTo={0.9}

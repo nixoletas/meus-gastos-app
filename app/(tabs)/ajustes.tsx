@@ -6,7 +6,6 @@ import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useAuth } from '../../src/context/AuthContext';
 import { ThemePreference, useTheme } from '../../src/theme/ThemeContext';
-import { notifyWarning, tapLight } from '../../src/utils/sound';
 
 export default function AjustesScreen() {
   const { colors, preference, setPreference } = useTheme();
@@ -26,7 +25,6 @@ export default function AjustesScreen() {
     const { error } = await deleteAccount();
     setDeleting(false);
     if (error) {
-      notifyWarning();
       setConfirmOpen(false);
       if (Platform.OS === 'web') window.alert(error);
       else Alert.alert('Erro', error);
@@ -52,7 +50,6 @@ export default function AjustesScreen() {
               <Pressable
                 key={opt.key}
                 onPress={() => {
-                  tapLight();
                   setPreference(opt.key);
                 }}
                 style={[
@@ -113,7 +110,6 @@ export default function AjustesScreen() {
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <Pressable
           onPress={() => {
-            tapLight();
             setConfirmOpen(true);
           }}
           style={[styles.deleteBtn, { backgroundColor: colors.dangerSoft }]}
@@ -158,7 +154,6 @@ export default function AjustesScreen() {
 
             <PressableScale
               onPress={() => {
-                tapLight();
                 setConfirmOpen(false);
               }}
               disabled={deleting}
