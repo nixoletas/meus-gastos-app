@@ -125,7 +125,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
         <Text style={styles.totalValue}>
-          {hideValue ? '••••••' : `${total > 0 ? '− ' : ''}${formatBRL(total)}`}
+          {hideValue ? '*****' : `${total > 0 ? '− ' : ''}${formatBRL(total)}`}
         </Text>
         <View style={styles.totalFooter}>
           <View style={styles.totalChip}>
