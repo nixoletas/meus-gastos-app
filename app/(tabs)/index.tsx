@@ -398,13 +398,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
   dateHeader: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
     marginTop: 6,
     marginBottom: 6,
     marginLeft: 4,
-    textTransform: 'uppercase',
   },
   sectionAction: { fontSize: 14, fontWeight: '700' },
   budgetCta: {

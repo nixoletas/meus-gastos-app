@@ -107,9 +107,19 @@ export function formatShortDate(iso: string): string {
   return `${day}/${month}`;
 }
 
+const WEEKDAYS = [
+  'domingo',
+  'segunda-feira',
+  'terça-feira',
+  'quarta-feira',
+  'quinta-feira',
+  'sexta-feira',
+  'sábado',
+];
+
 /**
  * Cabeçalho de grupo de data, ex.: "18/06 (hoje)", "17/06 (ontem)",
- * "08/06 (semana passada)". Retorna a data curta + qualificador relativo.
+ * "08/06 (semana passada)" ou "01/06 (segunda-feira)" para datas mais distantes.
  */
 export function dateHeaderLabel(iso: string): string {
   const d = fromISODate(iso);
@@ -122,6 +132,7 @@ export function dateHeaderLabel(iso: string): string {
   else if (diffDays === 1) qualifier = 'ontem';
   else if (diffDays >= 2 && diffDays <= 6) qualifier = 'essa semana';
   else if (diffDays >= 7 && diffDays <= 14) qualifier = 'semana passada';
+  else qualifier = WEEKDAYS[d.getDay()];
 
   return qualifier ? `${formatShortDate(iso)} (${qualifier})` : formatShortDate(iso);
 }
