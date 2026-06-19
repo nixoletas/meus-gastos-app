@@ -17,7 +17,10 @@ import { Text } from '../../src/theme/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
 import { ExpenseRow } from '../../src/components/ExpenseRow';
+import { Mascot } from '../../src/components/Mascot';
+import { PIGGY_BRAND } from '../../src/components/mascotSvg';
 import { PeriodSwitcher } from '../../src/components/PeriodSwitcher';
+import { useAuth } from '../../src/context/AuthContext';
 import { useData } from '../../src/context/DataContext';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { Expense } from '../../src/types';
@@ -36,6 +39,14 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { expenses, categories, budgets, getCategory, loading, seeding } = useData();
+  const { session } = useAuth();
+
+  // Primeiro nome do usuário a partir do e-mail (ex.: joao.silva -> João).
+  const firstName = useMemo(() => {
+    const local = session?.user.email?.split('@')[0] ?? '';
+    const raw = local.split(/[._-]/)[0];
+    return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : 'você';
+  }, [session?.user.email]);
 
   // Segunda cor do gradiente do cartão de total (primário → ciano).
   const gradientEnd = isDark ? '#0D9488' : '#0891B2';
@@ -89,12 +100,12 @@ export default function HomeScreen() {
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.topRow}>
-        <View>
-          <Text style={[styles.greeting, { color: colors.textMuted }]}>
-            Olá 👋
-          </Text>
-          <Text style={[styles.appName, { color: colors.text }]}>Meus Gastos</Text>
+        <View style={styles.mascotMini}>
+          <Mascot size={58} colors={PIGGY_BRAND} />
         </View>
+        <Text style={[styles.appName, { color: colors.text }]} numberOfLines={2}>
+          Bora poupar, {firstName}!
+        </Text>
       </View>
 
       <PeriodSwitcher
@@ -340,9 +351,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   header: { gap: 16, paddingTop: 8, paddingBottom: 12 },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  greeting: { fontSize: 15 },
-  appName: { fontSize: 25, fontWeight: '800', letterSpacing: -0.8 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  mascotMini: { width: 58, height: 58 },
+  appName: { flex: 1, fontSize: 24, fontWeight: '800', letterSpacing: -0.6 },
   totalCard: {
     borderRadius: 22,
     padding: 22,

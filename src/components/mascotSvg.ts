@@ -40,9 +40,10 @@ export function piggyBody(c: PiggyColors): string {
   <rect x="76" y="60" width="48" height="11" rx="5.5" fill="${c.slot}"/>
   <circle cx="56" cy="128" r="13" fill="${c.cheek}" opacity="0.65"/>
   <circle cx="144" cy="128" r="13" fill="${c.cheek}" opacity="0.65"/>
-  <ellipse cx="100" cy="132" rx="34" ry="23" fill="${c.dark}"/>
-  <ellipse cx="89" cy="132" rx="6" ry="8.5" fill="${c.slot}"/>
-  <ellipse cx="111" cy="132" rx="6" ry="8.5" fill="${c.slot}"/>`;
+  <ellipse cx="100" cy="130" rx="34" ry="22" fill="${c.dark}"/>
+  <ellipse cx="89" cy="130" rx="6" ry="8.5" fill="${c.slot}"/>
+  <ellipse cx="111" cy="130" rx="6" ry="8.5" fill="${c.slot}"/>
+  <path d="M85 156 Q100 167 115 156" fill="none" stroke="${c.slot}" stroke-width="4" stroke-linecap="round"/>`;
 }
 
 /** Olhos abertos. */
