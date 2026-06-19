@@ -31,8 +31,8 @@ export function PieChart({ data, size = 220, thickness = 34, children }: Props) 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size}>
-        {/* Gira -90° para o primeiro arco começar no topo. */}
-        <G rotation={-90} originX={size / 2} originY={size / 2}>
+        {/* Gira -90° para o primeiro arco começar no topo (rotate cross-platform). */}
+        <G transform={`rotate(-90 ${size / 2} ${size / 2})`}>
           {total === 0 ? (
             <Circle
               cx={size / 2}
