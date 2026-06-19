@@ -7,6 +7,7 @@ import React,
   useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Platform,
   Pressable,
   SectionList,
@@ -51,6 +52,12 @@ export default function HomeScreen() {
       : (session?.user.email?.split('@')[0] ?? '').split(/[._-]/)[0];
     return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : 'você';
   }, [session?.user.email, session?.user.user_metadata]);
+
+  // Avatar do Google (se houver) para mostrar no lugar do mascote.
+  const avatarUrl: string | undefined = useMemo(() => {
+    const meta = (session?.user.user_metadata ?? {}) as Record<string, any>;
+    return meta.avatar_url ?? meta.picture;
+  }, [session?.user.user_metadata]);
 
   // Segunda cor do gradiente do cartão de total (primário → ciano).
   const gradientEnd = isDark ? '#0D9488' : '#0891B2';
@@ -105,7 +112,11 @@ export default function HomeScreen() {
     <View style={styles.header}>
       <View style={styles.topRow}>
         <View style={styles.mascotMini}>
-          <Mascot size={58} colors={PIGGY_BRAND} />
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+          ) : (
+            <Mascot size={58} colors={PIGGY_BRAND} />
+          )}
         </View>
         <Text style={[styles.appName, { color: colors.text }]} numberOfLines={2}>
           Bora poupar, {firstName}!
@@ -356,7 +367,8 @@ const styles = StyleSheet.create({
   },
   header: { gap: 16, paddingTop: 8, paddingBottom: 12 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  mascotMini: { width: 58, height: 58 },
+  mascotMini: { width: 58, height: 58, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 52, height: 52, borderRadius: 26 },
   appName: { flex: 1, fontSize: 24, fontWeight: '800', letterSpacing: -0.6 },
   totalCard: {
     borderRadius: 22,
