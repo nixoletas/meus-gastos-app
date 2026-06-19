@@ -106,3 +106,24 @@ $$;
 
 revoke all on function public.delete_account() from public, anon;
 grant execute on function public.delete_account() to authenticated;
+
+-- ============================================================================
+--  Realtime: habilita a sincronização em tempo real das tabelas (idempotente).
+--  Faz cada lançamento/categoria/limite refletir na hora em outros aparelhos.
+-- ============================================================================
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['expenses', 'categories', 'budgets'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I;', t);
+    end if;
+  end loop;
+end $$;
+

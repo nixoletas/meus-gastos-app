@@ -144,6 +144,68 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userId, loadAll]);
 
+  // Sincronização em tempo real: reflete mudanças feitas em outros dispositivos.
+  // A deduplicação por id evita conflito com as atualizações otimistas locais.
+  useEffect(() => {
+    if (!userId) return;
+    const filter = `user_id=eq.${userId}`;
+
+    const sortExpenses = (list: Expense[]) =>
+      [...list].sort((a, b) =>
+        a.occurred_at === b.occurred_at
+          ? b.created_at.localeCompare(a.created_at)
+          : b.occurred_at.localeCompare(a.occurred_at)
+      );
+
+    const channel = supabase
+      .channel('realtime-meus-gastos')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'expenses', filter },
+        (payload) => {
+          setExpenses((prev) => {
+            if (payload.eventType === 'DELETE') {
+              return prev.filter((e) => e.id !== (payload.old as Expense).id);
+            }
+            const row = payload.new as Expense;
+            return sortExpenses([row, ...prev.filter((e) => e.id !== row.id)]);
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories', filter },
+        (payload) => {
+          setCategories((prev) => {
+            if (payload.eventType === 'DELETE') {
+              const id = (payload.old as Category).id;
+              return prev.filter((c) => c.id !== id && c.parent_id !== id);
+            }
+            const row = payload.new as Category;
+            return [...prev.filter((c) => c.id !== row.id), row];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'budgets', filter },
+        (payload) => {
+          setBudgets((prev) => {
+            if (payload.eventType === 'DELETE') {
+              return prev.filter((b) => b.id !== (payload.old as Budget).id);
+            }
+            const row = payload.new as Budget;
+            return [...prev.filter((b) => b.id !== row.id), row];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
   const categoriesWithSubs = useMemo<CategoryWithSubs[]>(() => {
     const parents = categories.filter((c) => c.parent_id === null);
     return parents.map((parent) => ({
