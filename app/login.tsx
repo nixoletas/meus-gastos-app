@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { Text, TextInput } from '../src/theme/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Mascot } from '../src/components/Mascot';
+import { PIGGY_BRAND } from '../src/components/mascotSvg';
 import { PressableScale } from '../src/components/PressableScale';
 import { useAuth } from '../src/context/AuthContext';
 import { useTheme } from '../src/theme/ThemeContext';
@@ -60,8 +62,8 @@ export default function LoginScreen() {
         style={styles.flex}
       >
         <View style={styles.content}>
-          <View style={[styles.logo, { backgroundColor: colors.primary }]}>
-            <MaterialCommunityIcons name="wallet" size={40} color={colors.onPrimary} />
+          <View style={styles.mascotWrap}>
+            <Mascot size={132} colors={PIGGY_BRAND} />
           </View>
           <Text style={[styles.title, { color: colors.text }]}>Meus Gastos</Text>
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
@@ -156,14 +158,12 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  logo: {
-    width: 76,
-    height: 76,
-    borderRadius: 22,
+  mascotWrap: {
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    marginBottom: 18,
+    height: 132,
+    marginBottom: 10,
   },
   title: { fontSize: 30, fontWeight: '800', textAlign: 'center' },
   subtitle: {

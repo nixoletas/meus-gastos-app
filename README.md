@@ -138,15 +138,31 @@ supabase/schema.sql        # Schema do banco (rodar no Supabase)
 
 ## 📦 Gerar build de produção
 
-- **Web estática:**
+- **Web (com OpenGraph):**
   ```bash
-  npx expo export --platform web
+  npm run build:web
   ```
+  Roda o `expo export` e injeta as meta tags de OpenGraph/SEO no `dist/index.html`.
   Os arquivos saem em `dist/` e podem ser publicados em qualquer hospedagem
   estática (Vercel, Netlify, GitHub Pages...).
+
+- **Gerar ícones/splash/OpenGraph** a partir do mascote:
+  ```bash
+  npm run gen:assets
+  ```
 
 - **Apps nativos:** use o [EAS Build](https://docs.expo.dev/build/introduction/):
   ```bash
   npx eas build --platform android
   npx eas build --platform ios
   ```
+
+## 🐷 Identidade visual
+
+O mascote é o **Pim**, um porquinho-cofrinho — símbolo universal de poupança e
+dinheiro. Ele aparece **animado** na tela de login (respira, pisca e "engole"
+uma moedinha de R$) e é a base do ícone do app, splash, favicon e da imagem de
+compartilhamento (OpenGraph). Paleta de marca: teal `#0EA5A4` → ciano `#0891B2`.
+
+- **Pacotes:** iOS `com.meusgastos.app` · Android `com.meusgastos.app`
+- **Fonte:** Space Grotesk (numerais marcantes, ótima para valores)
