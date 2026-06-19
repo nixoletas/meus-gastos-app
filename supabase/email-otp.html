@@ -1,0 +1,45 @@
+<!--
+  Template do e-mail de código (OTP) do Meus Gastos.
+  Onde colar: Supabase > Authentication > Emails > "Magic Link".
+  IMPORTANTE: use a variável {{ .Token }} (código de 6 dígitos), NÃO o link.
+  Assim o usuário recebe só o código para digitar no app.
+-->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F8;padding:32px 0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
+        <!-- Cabeçalho -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#0EA5A4,#0891B2);padding:28px 32px;text-align:center;">
+            <div style="font-size:40px;line-height:1;">🐷</div>
+            <div style="color:#FFFFFF;font-size:22px;font-weight:800;margin-top:8px;">Meus Gastos</div>
+            <div style="color:#E6FFFB;font-size:13px;margin-top:2px;">Pra onde vai cada centavo.</div>
+          </td>
+        </tr>
+        <!-- Corpo -->
+        <tr>
+          <td style="padding:32px;">
+            <p style="color:#0F172A;font-size:18px;font-weight:700;margin:0 0 6px;">Seu código de acesso</p>
+            <p style="color:#64748B;font-size:15px;line-height:22px;margin:0 0 24px;">
+              Use o código abaixo para entrar no app. Ele vale por poucos minutos.
+            </p>
+
+            <div style="background:#F4F6F8;border:1px dashed #0EA5A4;border-radius:14px;padding:18px;text-align:center;">
+              <div style="color:#0EA5A4;font-size:38px;font-weight:800;letter-spacing:10px;">{{ .Token }}</div>
+            </div>
+
+            <p style="color:#94A3B8;font-size:13px;line-height:20px;margin:24px 0 0;">
+              Se você não tentou entrar no Meus Gastos, pode ignorar este e-mail com tranquilidade.
+            </p>
+          </td>
+        </tr>
+        <!-- Rodapé -->
+        <tr>
+          <td style="padding:0 32px 28px;text-align:center;">
+            <div style="color:#CBD5E1;font-size:12px;">Meus Gastos · feito no Brasil 🇧🇷</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

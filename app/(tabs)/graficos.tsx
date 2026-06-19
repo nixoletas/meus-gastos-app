@@ -32,6 +32,7 @@ export default function GraficosScreen() {
   const [period, setPeriod] = useState<Period>('month');
   const [refDate, setRefDate] = useState(new Date());
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const byCategory = useMemo(
     () => totalsByCategory(expenses, categories, refDate, period),
@@ -47,6 +48,9 @@ export default function GraficosScreen() {
     value: item.total,
     color: item.category?.color ?? colors.textMuted,
   }));
+
+  // Detalhe da fatia selecionada (mostrado no centro do donut).
+  const selected = byCategory.find((c) => (c.categoryId ?? 'sem') === selectedKey);
 
   return (
     <ScrollView
@@ -78,11 +82,42 @@ export default function GraficosScreen() {
       ) : (
         <>
           <View style={styles.chartWrap}>
-            <PieChart data={slices} size={230} thickness={36}>
-              <Text style={[styles.centerLabel, { color: colors.textMuted }]}>Total</Text>
-              <Text style={[styles.centerValue, { color: colors.text }]}>
-                {formatBRL(total)}
-              </Text>
+            <PieChart
+              data={slices}
+              size={230}
+              thickness={36}
+              selectedKey={selectedKey}
+              onSelectSlice={setSelectedKey}
+            >
+              {selected ? (
+                <>
+                  <View
+                    style={[
+                      styles.centerDot,
+                      { backgroundColor: selected.category?.color ?? colors.textMuted },
+                    ]}
+                  />
+                  <Text style={[styles.centerName, { color: colors.text }]} numberOfLines={1}>
+                    {selected.category?.name ?? 'Sem categoria'}
+                  </Text>
+                  <Text style={[styles.centerValue, { color: colors.text }]}>
+                    {formatBRL(selected.total)}
+                  </Text>
+                  <Text style={[styles.centerLabel, { color: colors.textMuted }]}>
+                    {Math.round(selected.percent * 100)}% do total
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.centerLabel, { color: colors.textMuted }]}>Total</Text>
+                  <Text style={[styles.centerValue, { color: colors.text }]}>
+                    {formatBRL(total)}
+                  </Text>
+                  <Text style={[styles.centerHint, { color: colors.textMuted }]}>
+                    toque numa fatia
+                  </Text>
+                </>
+              )}
             </PieChart>
           </View>
 
@@ -194,6 +229,9 @@ const styles = StyleSheet.create({
   chartWrap: { alignItems: 'center', marginVertical: 6 },
   centerLabel: { fontSize: 14, fontWeight: '500' },
   centerValue: { fontSize: 24, fontWeight: '800', marginTop: 2 },
+  centerDot: { width: 14, height: 14, borderRadius: 7, marginBottom: 6 },
+  centerName: { fontSize: 15, fontWeight: '700', textAlign: 'center' },
+  centerHint: { fontSize: 12, fontWeight: '500', marginTop: 4 },
   legend: { gap: 10 },
   legendRow: { borderRadius: 16, overflow: 'hidden' },
   legendHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },

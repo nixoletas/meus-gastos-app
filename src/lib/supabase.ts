@@ -22,8 +22,10 @@ export const supabase = createClient(
       storage: AsyncStorage,
       autoRefreshToken: true,
       persistSession: true,
-      // Só faz sentido detectar sessão na URL no ambiente web (links mágicos / OAuth).
+      // Só faz sentido detectar sessão na URL no ambiente web (OAuth/redirect).
       detectSessionInUrl: Platform.OS === 'web',
+      // PKCE permite trocar o "code" do OAuth por sessão no mobile.
+      flowType: 'pkce',
     },
   }
 );

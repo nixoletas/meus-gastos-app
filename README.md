@@ -70,8 +70,23 @@ npm install
 > rodar de novo com segurança. Ele inclui a função `delete_account()`, usada
 > pela opção "Excluir conta".
 
-> **Dica:** em **Authentication → Providers → Email**, você pode desativar
-> "Confirm email" durante o desenvolvimento para entrar logo após o cadastro.
+### 3.1. Login: Google + código por e-mail (OTP)
+
+O app entra **sem senha** — só com Google ou um **código de 6 dígitos** enviado por e-mail.
+
+**Código por e-mail (OTP):**
+1. Em **Authentication → Emails → "Magic Link"**, cole o conteúdo de
+   [`supabase/email-otp.html`](./supabase/email-otp.html). Ele usa a variável
+   `{{ .Token }}` (o código), então o usuário recebe o **código** em vez de um link.
+2. Em **Authentication → Providers → Email**, deixe **"Confirm email" desligado**
+   (com OTP não há link de confirmação).
+
+**Google:**
+1. Em **Authentication → Providers → Google**, ative e preencha o **Client ID/Secret**
+   (criados no Google Cloud Console).
+2. Em **Authentication → URL Configuration**, adicione as **Redirect URLs**:
+   - `meusgastos://` (app mobile)
+   - a URL do seu site web (ex.: `http://localhost:8081` em dev e a de produção)
 
 ### 4. Rode o app
 
@@ -100,7 +115,9 @@ primeiro login.
 ```
 app/                       # Rotas (expo-router)
   _layout.tsx              # Providers + proteção de rotas (login)
-  login.tsx                # Entrar / criar conta
+  onboarding.tsx           # Boas-vindas (slides) na primeira vez
+  login.tsx                # Entrar com Google ou e-mail (sem senha)
+  otp.tsx                  # Código de 6 dígitos enviado por e-mail
   config.tsx               # Tela de "falta configurar o Supabase"
   novo.tsx                 # Lançar / editar gasto (com a comemoração)
   categoria.tsx            # Criar / editar categoria ou subcategoria

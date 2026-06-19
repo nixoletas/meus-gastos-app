@@ -1,7 +1,6 @@
-import {
-  MaterialCommunityIcons } from '@expo/vector-icons';
-import React,
-  { useRef, useState } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,54 +10,51 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Text, TextInput } from '../src/theme/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mascot } from '../src/components/Mascot';
 import { PIGGY_BRAND } from '../src/components/mascotSvg';
 import { PressableScale } from '../src/components/PressableScale';
 import { useAuth } from '../src/context/AuthContext';
 import { useTheme } from '../src/theme/ThemeContext';
+import { Text, TextInput } from '../src/theme/typography';
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
 
 export default function LoginScreen() {
   const { colors } = useTheme();
-  const { signIn, signUp } = useAuth();
+  const { signInWithGoogle, sendEmailOtp } = useAuth();
+  const router = useRouter();
 
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-
-  const isSignup = mode === 'signup';
   const scrollRef = useRef<ScrollView>(null);
 
-  // Ao focar um campo, rola o conteúdo para deixá-lo visível acima do teclado.
-  function handleFocus() {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+  async function handleGoogle() {
+    setError(null);
+    setLoadingGoogle(true);
+    const { error: err } = await signInWithGoogle();
+    setLoadingGoogle(false);
+    if (err) setError(err);
   }
 
-  async function handleSubmit() {
+  async function handleEmail() {
     setError(null);
-    setInfo(null);
-    if (!email.trim() || !password) {
-      setError('Preencha e-mail e senha.');
+    if (!isValidEmail(email)) {
+      setError('Digite um e-mail válido.');
       return;
     }
-    setLoading(true);
-    const { error: err } = isSignup
-      ? await signUp(email, password)
-      : await signIn(email, password);
-    setLoading(false);
-
+    setLoadingEmail(true);
+    const { error: err } = await sendEmailOtp(email);
+    setLoadingEmail(false);
     if (err) {
       setError(err);
-    } else if (isSignup) {
-      setInfo(
-        'Conta criada! Se a confirmação de e-mail estiver ativa no Supabase, confirme pelo link enviado.'
-      );
-      setMode('login');
+      return;
     }
+    router.push({ pathname: '/otp', params: { email: email.trim() } });
   }
 
   return (
@@ -77,13 +73,37 @@ export default function LoginScreen() {
             <Mascot size={132} colors={PIGGY_BRAND} />
           </View>
           <Text style={[styles.title, { color: colors.text }]}>Meus Gastos</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            {isSignup
-              ? 'Crie sua conta e saiba pra onde vai cada centavo.'
-              : 'Entre para acessar seus gastos em qualquer lugar.'}
+          <Text style={[styles.slogan, { color: colors.primary }]}>
+            Pra onde vai cada centavo.
           </Text>
 
           <View style={styles.form}>
+            {/* Google */}
+            <PressableScale
+              onPress={handleGoogle}
+              disabled={loadingGoogle}
+              style={[styles.googleBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              {loadingGoogle ? (
+                <ActivityIndicator color={colors.text} />
+              ) : (
+                <>
+                  <MaterialCommunityIcons name="google" size={22} color="#EA4335" />
+                  <Text style={[styles.googleText, { color: colors.text }]}>
+                    Continuar com Google
+                  </Text>
+                </>
+              )}
+            </PressableScale>
+
+            {/* Divisor */}
+            <View style={styles.divider}>
+              <View style={[styles.line, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textMuted }]}>ou</Text>
+              <View style={[styles.line, { backgroundColor: colors.border }]} />
+            </View>
+
+            {/* E-mail */}
             <View style={[styles.inputBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <MaterialCommunityIcons name="email-outline" size={20} color={colors.textMuted} />
               <TextInput
@@ -94,65 +114,31 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 autoComplete="email"
-                onFocus={handleFocus}
+                onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80)}
+                onSubmitEditing={handleEmail}
                 style={[styles.input, { color: colors.text }]}
               />
             </View>
 
-            <View style={[styles.inputBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textMuted} />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Senha"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete={isSignup ? 'new-password' : 'password'}
-                textContentType={isSignup ? 'newPassword' : 'password'}
-                onFocus={handleFocus}
-                style={[styles.input, { color: colors.text }]}
-                onSubmitEditing={handleSubmit}
-              />
-            </View>
-
-            {error && (
-              <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
-            )}
-            {info && (
-              <Text style={[styles.info, { color: colors.success }]}>{info}</Text>
-            )}
+            {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
 
             <PressableScale
-              onPress={handleSubmit}
-              disabled={loading}
+              onPress={handleEmail}
+              disabled={loadingEmail}
               style={[styles.button, { backgroundColor: colors.primary }]}
             >
-              {loading ? (
+              {loadingEmail ? (
                 <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
-                  {isSignup ? 'Criar conta' : 'Entrar'}
+                  Continuar com e-mail
                 </Text>
               )}
             </PressableScale>
 
-            <Pressable
-              onPress={() => {
-                setMode(isSignup ? 'login' : 'signup');
-                setError(null);
-                setInfo(null);
-              }}
-              style={styles.switch}
-            >
-              <Text style={[styles.switchText, { color: colors.textMuted }]}>
-                {isSignup ? 'Já tem conta? ' : 'Ainda não tem conta? '}
-                <Text style={{ color: colors.primary, fontWeight: '700' }}>
-                  {isSignup ? 'Entrar' : 'Criar agora'}
-                </Text>
-              </Text>
-            </Pressable>
+            <Text style={[styles.hint, { color: colors.textMuted }]}>
+              Enviamos um código de 6 dígitos por e-mail. Sem senha, sem complicação.
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -177,17 +163,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
     height: 132,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   title: { fontSize: 30, fontWeight: '800', textAlign: 'center' },
-  subtitle: {
+  slogan: {
     fontSize: 16,
+    fontWeight: '700',
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 4,
     marginBottom: 28,
-    lineHeight: 22,
   },
   form: { gap: 14 },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 54,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  googleText: { fontSize: 16, fontWeight: '700' },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 2 },
+  line: { flex: 1, height: 1 },
+  dividerText: { fontSize: 14, fontWeight: '600' },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,15 +198,12 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 16, height: '100%' },
   error: { fontSize: 14, marginTop: -2 },
-  info: { fontSize: 14, marginTop: -2, lineHeight: 20 },
   button: {
     height: 54,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
   },
   buttonText: { fontSize: 17, fontWeight: '700' },
-  switch: { alignItems: 'center', marginTop: 8 },
-  switchText: { fontSize: 15 },
+  hint: { fontSize: 13, textAlign: 'center', lineHeight: 19, marginTop: 2 },
 });

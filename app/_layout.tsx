@@ -14,12 +14,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { DataProvider } from '../src/context/DataContext';
+import { OnboardingProvider, useOnboarding } from '../src/context/OnboardingContext';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
 import { APP_FONTS } from '../src/theme/typography';
 
-/** Redireciona entre as telas de login e o app conforme a sessão. */
+/** Redireciona entre onboarding, login e o app conforme a sessão. */
 function AuthGate() {
   const { session, loading, configured } = useAuth();
+  const { onboarded } = useOnboarding();
   const segments = useSegments();
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -40,24 +42,31 @@ function AuthGate() {
   };
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || onboarded === null) return;
 
     const seg = segments[0] as string | undefined;
-    const inAuthArea = seg === 'login' || seg === 'config';
+    const inAuthArea =
+      seg === 'login' || seg === 'config' || seg === 'otp' || seg === 'onboarding';
 
     if (!configured) {
       if (seg !== 'config') router.replace('/config');
       return;
     }
 
-    if (!session && !inAuthArea) {
-      router.replace('/login');
-    } else if (session && inAuthArea) {
-      router.replace('/(tabs)');
+    if (session) {
+      if (inAuthArea) router.replace('/(tabs)');
+      return;
     }
-  }, [session, loading, configured, segments]);
 
-  if (loading) {
+    // Sem sessão: primeiro o onboarding, depois o login.
+    if (!onboarded) {
+      if (seg !== 'onboarding') router.replace('/onboarding');
+    } else if (!inAuthArea) {
+      router.replace('/login');
+    }
+  }, [session, loading, configured, onboarded, segments]);
+
+  if (loading || onboarded === null) {
     return (
       <View
         style={{
@@ -81,7 +90,9 @@ function AuthGate() {
         }}
       >
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="onboarding" />
         <Stack.Screen name="login" />
+        <Stack.Screen name="otp" />
         <Stack.Screen name="config" />
         <Stack.Screen
           name="novo"
@@ -121,12 +132,14 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AuthProvider>
-            <DataProvider>
-              <ThemedStatusBar />
-              <AuthGate />
-            </DataProvider>
-          </AuthProvider>
+          <OnboardingProvider>
+            <AuthProvider>
+              <DataProvider>
+                <ThemedStatusBar />
+                <AuthGate />
+              </DataProvider>
+            </AuthProvider>
+          </OnboardingProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
