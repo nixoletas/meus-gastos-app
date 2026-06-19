@@ -1,12 +1,13 @@
 import {
   MaterialCommunityIcons } from '@expo/vector-icons';
 import React,
-  { useState } from 'react';
+  { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
@@ -30,6 +31,12 @@ export default function LoginScreen() {
   const [info, setInfo] = useState<string | null>(null);
 
   const isSignup = mode === 'signup';
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Ao focar um campo, rola o conteúdo para deixá-lo visível acima do teclado.
+  function handleFocus() {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+  }
 
   async function handleSubmit() {
     setError(null);
@@ -51,17 +58,21 @@ export default function LoginScreen() {
         'Conta criada! Se a confirmação de e-mail estiver ativa no Supabase, confirme pelo link enviado.'
       );
       setMode('login');
-    } else {
     }
   }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
-        <View style={styles.content}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.mascotWrap}>
             <Mascot size={132} colors={PIGGY_BRAND} />
           </View>
@@ -83,6 +94,7 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 autoComplete="email"
+                onFocus={handleFocus}
                 style={[styles.input, { color: colors.text }]}
               />
             </View>
@@ -99,6 +111,7 @@ export default function LoginScreen() {
                 autoCorrect={false}
                 autoComplete={isSignup ? 'new-password' : 'password'}
                 textContentType={isSignup ? 'newPassword' : 'password'}
+                onFocus={handleFocus}
                 style={[styles.input, { color: colors.text }]}
                 onSubmitEditing={handleSubmit}
               />
@@ -141,7 +154,7 @@ export default function LoginScreen() {
               </Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -151,9 +164,10 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   content: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
+    paddingBottom: 40,
     maxWidth: 460,
     width: '100%',
     alignSelf: 'center',
