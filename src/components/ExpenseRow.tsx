@@ -8,7 +8,6 @@ import { Text } from '../theme/typography';
 import { Category, Expense } from '../types';
 import { useTheme } from '../theme/ThemeContext';
 import { formatBRL } from '../utils/currency';
-import { relativeDayLabel } from '../utils/date';
 import { CategoryIcon } from './CategoryIcon';
 import { PressableScale } from './PressableScale';
 
@@ -27,11 +26,10 @@ export function ExpenseRow({ expense, category, subcategory, onPress }: Props) {
   const icon = display?.icon ?? 'tag';
   const color = category?.color ?? display?.color ?? colors.textMuted;
 
-  const title =
-    subcategory?.name ?? category?.name ?? expense.note ?? 'Gasto';
-  const subtitle = subcategory
-    ? category?.name ?? ''
-    : expense.note ?? '';
+  const title = subcategory?.name ?? category?.name ?? 'Gasto';
+  const note = expense.note?.trim();
+  // Mostra a nota; se não houver, a categoria-mãe (quando for subcategoria).
+  const secondary = note || (subcategory ? category?.name : undefined);
 
   return (
     <PressableScale
@@ -43,12 +41,11 @@ export function ExpenseRow({ expense, category, subcategory, onPress }: Props) {
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {title}
         </Text>
-        <View style={styles.metaRow}>
+        {!!secondary && (
           <Text style={[styles.meta, { color: colors.textMuted }]} numberOfLines={1}>
-            {relativeDayLabel(expense.occurred_at)}
-            {subtitle ? ` · ${subtitle}` : ''}
+            {secondary}
           </Text>
-        </View>
+        )}
       </View>
       <Text style={[styles.amount, { color: colors.text }]}>
         {formatBRL(expense.amount)}
@@ -74,7 +71,7 @@ const styles = StyleSheet.create({
   },
   middle: { flex: 1, gap: 2 },
   title: { fontSize: 16, fontWeight: '600' },
-  metaRow: { flexDirection: 'row' },
   meta: { fontSize: 13 },
   amount: { fontSize: 16, fontWeight: '700' },
 });
+

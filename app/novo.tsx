@@ -362,7 +362,7 @@ export default function NovoGastoScreen() {
               setNote(t);
             }}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
-            placeholder="sushi com a família"
+            placeholder="Adicione uma nota (opcional)"
             placeholderTextColor={colors.textMuted}
             style={[
               styles.noteInput,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { GestureResponderEvent, Pressable } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 export type PieSlice = {
@@ -49,7 +49,9 @@ function annularSector(
 }
 
 /**
- * Gráfico donut com fatias clicáveis (react-native-svg, mobile e web).
+ * Gráfico donut com fatias clicáveis.
+ * O toque é detectado por um Pressable em volta do SVG (calculamos a fatia
+ * pelo ângulo), evitando onPress nas formas — que quebra no web.
  */
 export function PieChart({
   data,
@@ -64,65 +66,86 @@ export function PieChart({
   const rOuter = size / 2;
   const rInner = size / 2 - thickness;
   const total = data.reduce((s, d) => s + d.value, 0);
-  const start = -Math.PI / 2; // começa no topo
+  const startAngle = -Math.PI / 2; // começa no topo
 
-  let angle = start;
-  const onlyOne = data.filter((d) => d.value > 0).length === 1;
+  const positive = data.filter((d) => d.value > 0);
+  const onlyOne = positive.length === 1;
+
+  // Geometria das fatias (para desenhar e para detectar o toque).
+  const segments: { key: string; color: string; a0: number; a1: number }[] = [];
+  let angle = startAngle;
+  for (const slice of data) {
+    if (slice.value <= 0) continue;
+    const sweep = (slice.value / total) * Math.PI * 2;
+    segments.push({ key: slice.key, color: slice.color, a0: angle, a1: angle + sweep });
+    angle += sweep;
+  }
+
+  function handleTap(e: GestureResponderEvent) {
+    if (!onSelectSlice || total === 0) return;
+    const ne = e.nativeEvent as any;
+    const x = ne.locationX ?? ne.offsetX;
+    const y = ne.locationY ?? ne.offsetY;
+    if (x == null || y == null) return;
+
+    const dx = x - cx;
+    const dy = y - cy;
+    const r = Math.sqrt(dx * dx + dy * dy);
+    // Toque no buraco do donut ou fora: limpa a seleção.
+    if (r < rInner - 4 || r > rOuter + 6) {
+      onSelectSlice(null);
+      return;
+    }
+    // Ângulo do toque normalizado a partir do topo.
+    let a = Math.atan2(dy, dx);
+    let norm = a - startAngle;
+    while (norm < 0) norm += Math.PI * 2;
+    while (norm >= Math.PI * 2) norm -= Math.PI * 2;
+
+    const target = segments.find((s) => {
+      const s0 = s.a0 - startAngle;
+      const s1 = s.a1 - startAngle;
+      return norm >= s0 && norm < s1;
+    });
+    if (target) onSelectSlice(selectedKey === target.key ? null : target.key);
+  }
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size}>
+    <Pressable
+      onPress={handleTap}
+      style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Svg width={size} height={size} pointerEvents="none">
         {total === 0 ? (
           <Circle cx={cx} cy={cy} r={(rOuter + rInner) / 2} stroke="#E2E8F0" strokeWidth={thickness} fill="none" />
+        ) : onlyOne ? (
+          <Circle
+            cx={cx}
+            cy={cy}
+            r={(rOuter + rInner) / 2}
+            stroke={positive[0].color}
+            strokeWidth={thickness}
+            fill="none"
+          />
         ) : (
-          data.map((slice) => {
-            if (slice.value <= 0) return null;
-            const fraction = slice.value / total;
-            const sweep = fraction * Math.PI * 2;
-            const a0 = angle;
-            const a1 = angle + sweep;
-            angle = a1;
-
-            const dimmed = selectedKey != null && selectedKey !== slice.key;
-            const handlePress = () =>
-              onSelectSlice?.(selectedKey === slice.key ? null : slice.key);
-
-            // Fatia única = anel completo.
-            if (onlyOne) {
-              return (
-                <Circle
-                  key={slice.key}
-                  cx={cx}
-                  cy={cy}
-                  r={(rOuter + rInner) / 2}
-                  stroke={slice.color}
-                  strokeWidth={thickness}
-                  fill="none"
-                  onPress={handlePress}
-                />
-              );
-            }
-
-            return (
-              <Path
-                key={slice.key}
-                d={annularSector(cx, cy, rOuter, rInner, a0, a1)}
-                fill={slice.color}
-                opacity={dimmed ? 0.3 : 1}
-                onPress={handlePress}
-              />
-            );
-          })
+          segments.map((s) => (
+            <Path
+              key={s.key}
+              d={annularSector(cx, cy, rOuter, rInner, s.a0, s.a1)}
+              fill={s.color}
+              opacity={selectedKey != null && selectedKey !== s.key ? 0.3 : 1}
+            />
+          ))
         )}
       </Svg>
       {children && (
-        <View
-          pointerEvents="none"
+        <Pressable
+          onPress={handleTap}
           style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}
         >
           {children}
-        </View>
+        </Pressable>
       )}
-    </View>
+    </Pressable>
   );
 }
