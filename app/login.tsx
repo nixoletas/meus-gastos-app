@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GoogleIcon } from '../src/components/GoogleIcon';
 import { Mascot } from '../src/components/Mascot';
 import { PIGGY_BRAND } from '../src/components/mascotSvg';
 import { PressableScale } from '../src/components/PressableScale';
@@ -88,7 +89,7 @@ export default function LoginScreen() {
                 <ActivityIndicator color={colors.text} />
               ) : (
                 <>
-                  <MaterialCommunityIcons name="google" size={22} color="#EA4335" />
+                  <GoogleIcon size={22} />
                   <Text style={[styles.googleText, { color: colors.text }]}>
                     Continuar com Google
                   </Text>

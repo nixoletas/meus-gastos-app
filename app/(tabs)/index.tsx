@@ -41,12 +41,16 @@ export default function HomeScreen() {
   const { expenses, categories, budgets, getCategory, loading, seeding } = useData();
   const { session } = useAuth();
 
-  // Primeiro nome do usuário a partir do e-mail (ex.: joao.silva -> João).
+  // Primeiro nome: usa o nome do Google quando houver; senão, deriva do e-mail.
   const firstName = useMemo(() => {
-    const local = session?.user.email?.split('@')[0] ?? '';
-    const raw = local.split(/[._-]/)[0];
+    const meta = (session?.user.user_metadata ?? {}) as Record<string, any>;
+    const fromMeta: string | undefined =
+      meta.given_name ?? meta.full_name ?? meta.name;
+    const raw = fromMeta
+      ? String(fromMeta).trim().split(' ')[0]
+      : (session?.user.email?.split('@')[0] ?? '').split(/[._-]/)[0];
     return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : 'você';
-  }, [session?.user.email]);
+  }, [session?.user.email, session?.user.user_metadata]);
 
   // Segunda cor do gradiente do cartão de total (primário → ciano).
   const gradientEnd = isDark ? '#0D9488' : '#0891B2';
