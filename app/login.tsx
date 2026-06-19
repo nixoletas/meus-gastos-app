@@ -68,7 +68,7 @@ export default function LoginScreen() {
           <Text style={[styles.title, { color: colors.text }]}>Meus Gastos</Text>
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             {isSignup
-              ? 'Crie sua conta para começar a controlar os gastos.'
+              ? 'Crie sua conta e saiba pra onde vai cada centavo.'
               : 'Entre para acessar seus gastos em qualquer lugar.'}
           </Text>
 
