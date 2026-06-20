@@ -45,8 +45,10 @@ function AuthGate() {
     if (loading || onboarded === null) return;
 
     const seg = segments[0] as string | undefined;
-    const inAuthArea =
-      seg === 'login' || seg === 'config' || seg === 'otp' || seg === 'onboarding';
+    // Telas de onde um usuário logado é levado de volta ao app.
+    const authScreens = ['login', 'otp', 'onboarding', 'config'];
+    // Telas acessíveis sem sessão (inclui /legal para ler antes de aceitar).
+    const publicScreens = [...authScreens, 'legal'];
 
     if (!configured) {
       if (seg !== 'config') router.replace('/config');
@@ -54,14 +56,14 @@ function AuthGate() {
     }
 
     if (session) {
-      if (inAuthArea) router.replace('/(tabs)');
+      if (seg && authScreens.includes(seg)) router.replace('/(tabs)');
       return;
     }
 
     // Sem sessão: primeiro o onboarding, depois o login.
     if (!onboarded) {
-      if (seg !== 'onboarding') router.replace('/onboarding');
-    } else if (!inAuthArea) {
+      if (seg !== 'onboarding' && seg !== 'legal') router.replace('/onboarding');
+    } else if (!seg || !publicScreens.includes(seg)) {
       router.replace('/login');
     }
   }, [session, loading, configured, onboarded, segments]);
