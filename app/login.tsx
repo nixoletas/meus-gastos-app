@@ -34,6 +34,10 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
+  // Login por e-mail (OTP) só aparece quando há SMTP/domínio configurado.
+  // Defina EXPO_PUBLIC_ENABLE_EMAIL_OTP=true no .env para habilitar.
+  const emailEnabled = process.env.EXPO_PUBLIC_ENABLE_EMAIL_OTP === 'true';
+
   async function handleGoogle() {
     setError(null);
     setLoadingGoogle(true);
@@ -97,49 +101,59 @@ export default function LoginScreen() {
               )}
             </PressableScale>
 
-            {/* Divisor */}
-            <View style={styles.divider}>
-              <View style={[styles.line, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textMuted }]}>ou</Text>
-              <View style={[styles.line, { backgroundColor: colors.border }]} />
-            </View>
+            {/* Login por e-mail (OTP) — habilitado só quando há SMTP/domínio.
+                Defina EXPO_PUBLIC_ENABLE_EMAIL_OTP=true para exibir. */}
+            {emailEnabled && (
+              <>
+                {/* Divisor */}
+                <View style={styles.divider}>
+                  <View style={[styles.line, { backgroundColor: colors.border }]} />
+                  <Text style={[styles.dividerText, { color: colors.textMuted }]}>ou</Text>
+                  <View style={[styles.line, { backgroundColor: colors.border }]} />
+                </View>
 
-            {/* E-mail */}
-            <View style={[styles.inputBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <MaterialCommunityIcons name="email-outline" size={20} color={colors.textMuted} />
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="seu@email.com"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-                onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80)}
-                onSubmitEditing={handleEmail}
-                style={[styles.input, { color: colors.text }]}
-              />
-            </View>
+                {/* E-mail */}
+                <View style={[styles.inputBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <MaterialCommunityIcons name="email-outline" size={20} color={colors.textMuted} />
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="seu@email.com"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80)}
+                    onSubmitEditing={handleEmail}
+                    style={[styles.input, { color: colors.text }]}
+                  />
+                </View>
 
-            {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
+                {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
 
-            <PressableScale
-              onPress={handleEmail}
-              disabled={loadingEmail}
-              style={[styles.button, { backgroundColor: colors.primary }]}
-            >
-              {loadingEmail ? (
-                <ActivityIndicator color={colors.onPrimary} />
-              ) : (
-                <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
-                  Continuar com e-mail
+                <PressableScale
+                  onPress={handleEmail}
+                  disabled={loadingEmail}
+                  style={[styles.button, { backgroundColor: colors.primary }]}
+                >
+                  {loadingEmail ? (
+                    <ActivityIndicator color={colors.onPrimary} />
+                  ) : (
+                    <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
+                      Continuar com e-mail
+                    </Text>
+                  )}
+                </PressableScale>
+
+                <Text style={[styles.hint, { color: colors.textMuted }]}>
+                  Enviamos um código de 6 dígitos por e-mail. Sem senha, sem complicação.
                 </Text>
-              )}
-            </PressableScale>
+              </>
+            )}
 
-            <Text style={[styles.hint, { color: colors.textMuted }]}>
-              Enviamos um código de 6 dígitos por e-mail. Sem senha, sem complicação.
-            </Text>
+            {!emailEnabled && error && (
+              <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
+            )}
 
             <Text style={[styles.consent, { color: colors.textMuted }]}>
               Ao continuar, você concorda com os{' '}
