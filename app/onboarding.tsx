@@ -57,7 +57,6 @@ export default function OnboardingScreen() {
   const { complete } = useOnboarding();
   const scrollRef = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
-  const [accepted, setAccepted] = useState(false);
 
   const isLast = page === SLIDES.length - 1;
 
@@ -73,15 +72,10 @@ export default function OnboardingScreen() {
 
   function next() {
     if (isLast) {
-      if (accepted) finish();
+      finish();
     } else {
       scrollRef.current?.scrollTo({ x: (page + 1) * width, animated: true });
     }
-  }
-
-  // "Pular" leva ao último slide (onde está o aceite), não direto pro login.
-  function skip() {
-    scrollRef.current?.scrollTo({ x: (SLIDES.length - 1) * width, animated: true });
   }
 
   return (
@@ -89,7 +83,7 @@ export default function OnboardingScreen() {
       {/* Pular */}
       <View style={styles.topBar}>
         {!isLast && (
-          <Pressable onPress={skip} hitSlop={10} style={styles.skip}>
+          <Pressable onPress={finish} hitSlop={10} style={styles.skip}>
             <Text style={[styles.skipText, { color: colors.textMuted }]}>Pular</Text>
           </Pressable>
         )}
@@ -137,65 +131,18 @@ export default function OnboardingScreen() {
       </View>
 
       <View style={styles.footer}>
-        {isLast && (
-          <Pressable
-            onPress={() => setAccepted((v) => !v)}
-            style={styles.acceptRow}
-          >
-            <View
-              style={[
-                styles.checkbox,
-                {
-                  backgroundColor: accepted ? colors.primary : 'transparent',
-                  borderColor: accepted ? colors.primary : colors.border,
-                },
-              ]}
-            >
-              {accepted && (
-                <MaterialCommunityIcons name="check" size={16} color={colors.onPrimary} />
-              )}
-            </View>
-            <Text style={[styles.acceptText, { color: colors.textMuted }]}>
-              Li e aceito os{' '}
-              <Text
-                style={{ color: colors.primary, fontWeight: '700' }}
-                onPress={() => router.push({ pathname: '/legal', params: { doc: 'terms' } })}
-              >
-                Termos de Uso
-              </Text>{' '}
-              e a{' '}
-              <Text
-                style={{ color: colors.primary, fontWeight: '700' }}
-                onPress={() => router.push({ pathname: '/legal', params: { doc: 'privacy' } })}
-              >
-                Política de Privacidade
-              </Text>
-              .
-            </Text>
-          </Pressable>
-        )}
-
         <PressableScale
           onPress={next}
           scaleTo={0.97}
-          disabled={isLast && !accepted}
-          style={[
-            styles.button,
-            { backgroundColor: isLast && !accepted ? colors.surface : colors.primary },
-          ]}
+          style={[styles.button, { backgroundColor: colors.primary }]}
         >
-          <Text
-            style={[
-              styles.buttonText,
-              { color: isLast && !accepted ? colors.textMuted : colors.onPrimary },
-            ]}
-          >
+          <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
             {isLast ? 'Começar' : 'Próximo'}
           </Text>
           <MaterialCommunityIcons
             name={isLast ? 'rocket-launch' : 'arrow-right'}
             size={20}
-            color={isLast && !accepted ? colors.textMuted : colors.onPrimary}
+            color={colors.onPrimary}
           />
         </PressableScale>
       </View>
@@ -222,25 +169,6 @@ const styles = StyleSheet.create({
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 7, marginBottom: 16 },
   dot: { height: 8, borderRadius: 4 },
   footer: { paddingHorizontal: 24, paddingBottom: 16 },
-  acceptRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    marginBottom: 14,
-    maxWidth: 460,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  acceptText: { flex: 1, fontSize: 14, lineHeight: 20 },
   button: {
     height: 56,
     borderRadius: 16,

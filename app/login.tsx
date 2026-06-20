@@ -140,6 +140,24 @@ export default function LoginScreen() {
             <Text style={[styles.hint, { color: colors.textMuted }]}>
               Enviamos um código de 6 dígitos por e-mail. Sem senha, sem complicação.
             </Text>
+
+            <Text style={[styles.consent, { color: colors.textMuted }]}>
+              Ao continuar, você concorda com os{' '}
+              <Text
+                style={{ color: colors.primary, fontWeight: '700' }}
+                onPress={() => router.push({ pathname: '/legal', params: { doc: 'terms' } })}
+              >
+                Termos de Uso
+              </Text>{' '}
+              e a{' '}
+              <Text
+                style={{ color: colors.primary, fontWeight: '700' }}
+                onPress={() => router.push({ pathname: '/legal', params: { doc: 'privacy' } })}
+              >
+                Política de Privacidade
+              </Text>
+              .
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -207,4 +225,5 @@ const styles = StyleSheet.create({
   },
   buttonText: { fontSize: 17, fontWeight: '700' },
   hint: { fontSize: 13, textAlign: 'center', lineHeight: 19, marginTop: 2 },
+  consent: { fontSize: 12.5, textAlign: 'center', lineHeight: 18, marginTop: 4 },
 });
