@@ -43,3 +43,6 @@ yarn-error.*
 # environment
 .env
 .env*.local
+
+# EAS / Play submit
+play-service-account.json
