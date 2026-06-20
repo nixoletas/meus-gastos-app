@@ -106,7 +106,9 @@ export default function HomeScreen() {
         .sort((a, b) => b.ratio - a.ratio),
     [budgets, expenses, categories, refDate, period]
   );
-  const alerts = periodBudgets.filter((a) => a.level !== 'ok');
+  // Banner de alerta só para limites ULTRAPASSADOS (o estado "perto do limite"
+  // já fica claro na barra da seção "Limite de gastos" logo abaixo).
+  const alerts = periodBudgets.filter((a) => a.level === 'exceeded');
 
   const renderHeader = () => (
     <View style={styles.header}>
