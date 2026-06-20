@@ -94,6 +94,7 @@ function AuthGate() {
         <Stack.Screen name="login" />
         <Stack.Screen name="otp" />
         <Stack.Screen name="config" />
+        <Stack.Screen name="legal" />
         <Stack.Screen
           name="novo"
           options={{

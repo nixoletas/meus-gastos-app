@@ -1,10 +1,12 @@
-import {
-  MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import React,
   { useState } from 'react';
 import { ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -17,12 +19,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useAuth } from '../../src/context/AuthContext';
+import { CONTACT_EMAIL } from '../../src/legal/content';
 import { ThemePreference, useTheme } from '../../src/theme/ThemeContext';
 
 export default function AjustesScreen() {
   const { colors, preference, setPreference } = useTheme();
   const { session, signOut, deleteAccount } = useAuth();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
@@ -138,6 +143,43 @@ export default function AjustesScreen() {
           <MaterialCommunityIcons name="logout" size={20} color={colors.text} />
           <Text style={[styles.logoutText, { color: colors.text }]}>Sair</Text>
         </Pressable>
+      </View>
+
+      {/* Sobre / Legal */}
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>SOBRE</Text>
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <Pressable
+          onPress={() => router.push({ pathname: '/legal', params: { doc: 'privacy' } })}
+          style={styles.aboutRow}
+        >
+          <MaterialCommunityIcons name="shield-lock-outline" size={20} color={colors.textMuted} />
+          <Text style={[styles.aboutText, { color: colors.text }]}>Política de Privacidade</Text>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <Pressable
+          onPress={() => router.push({ pathname: '/legal', params: { doc: 'terms' } })}
+          style={styles.aboutRow}
+        >
+          <MaterialCommunityIcons name="file-document-outline" size={20} color={colors.textMuted} />
+          <Text style={[styles.aboutText, { color: colors.text }]}>Termos de Uso</Text>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <Pressable
+          onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)}
+          style={styles.aboutRow}
+        >
+          <MaterialCommunityIcons name="email-outline" size={20} color={colors.textMuted} />
+          <Text style={[styles.aboutText, { color: colors.text }]}>Falar com a gente</Text>
+          <MaterialCommunityIcons name="open-in-new" size={18} color={colors.textMuted} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <View style={styles.aboutRow}>
+          <MaterialCommunityIcons name="information-outline" size={20} color={colors.textMuted} />
+          <Text style={[styles.aboutText, { color: colors.text }]}>Versão</Text>
+          <Text style={[styles.aboutValue, { color: colors.textMuted }]}>{appVersion}</Text>
+        </View>
       </View>
 
       {/* Zona de perigo */}
@@ -289,6 +331,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   logoutText: { fontSize: 16, fontWeight: '700' },
+  aboutRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  aboutText: { flex: 1, fontSize: 15, fontWeight: '600' },
+  aboutValue: { fontSize: 15, fontWeight: '600' },
+  divider: { height: 1, opacity: 0.6 },
   deleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
