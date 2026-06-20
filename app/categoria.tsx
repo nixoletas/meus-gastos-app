@@ -6,8 +6,9 @@ import React,
   { useEffect,
   useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -40,6 +41,13 @@ export default function CategoriaScreen() {
   const [color, setColor] = useState(parent?.color ?? '#0EA5A4');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Quantas subcategorias serão removidas junto (só para categoria-mãe).
+  const subCount = editing && !isSub
+    ? categories.filter((c) => c.parent_id === editing.id).length
+    : 0;
 
   useEffect(() => {
     if (editing) {
@@ -81,26 +89,11 @@ export default function CategoriaScreen() {
     router.back();
   }
 
-  function confirmDelete() {
+  async function doDelete() {
     if (!editing) return;
-    const msg = isSub
-      ? 'Excluir esta subcategoria?'
-      : 'Excluir esta categoria e todas as suas subcategorias?';
-
-    const doDelete = async () => {
-      await deleteCategory(editing.id);
-      router.back();
-    };
-
-    if (Platform.OS === 'web') {
-      // Alert.alert no web não tem botões; usamos confirm nativo.
-      if (typeof window !== 'undefined' && window.confirm(msg)) doDelete();
-      return;
-    }
-    Alert.alert('Confirmar exclusão', msg, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: doDelete },
-    ]);
+    setDeleting(true);
+    await deleteCategory(editing.id);
+    router.back();
   }
 
   return (
@@ -115,7 +108,7 @@ export default function CategoriaScreen() {
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
         {editing ? (
-          <Pressable onPress={confirmDelete} hitSlop={12} style={styles.headerBtn}>
+          <Pressable onPress={() => setConfirmOpen(true)} hitSlop={12} style={styles.headerBtn}>
             <MaterialCommunityIcons name="trash-can-outline" size={24} color={colors.danger} />
           </Pressable>
         ) : (
@@ -191,6 +184,60 @@ export default function CategoriaScreen() {
         onSelect={setIcon}
         onClose={() => setPickerOpen(false)}
       />
+
+      {/* Confirmação de exclusão */}
+      <Modal
+        visible={confirmOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleting && setConfirmOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+            <View style={styles.modalPreview}>
+              <CategoryIcon
+                icon={editing?.icon ?? icon}
+                color={editing?.color ?? (isSub ? parent?.color ?? color : color)}
+                size={64}
+                solid
+              />
+            </View>
+
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Excluir {isSub ? 'subcategoria' : 'categoria'} “{editing?.name ?? name}”?
+            </Text>
+            <Text style={[styles.modalBody, { color: colors.textMuted }]}>
+              {isSub
+                ? 'Os gastos lançados nela continuam, mas ficam sem subcategoria.'
+                : subCount > 0
+                  ? `As ${subCount} subcategorias também serão removidas. Os gastos continuam, mas ficam sem categoria.`
+                  : 'Os gastos lançados nela continuam, mas ficam sem categoria.'}
+              {' '}Esta ação não pode ser desfeita.
+            </Text>
+
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setConfirmOpen(false)}
+                disabled={deleting}
+                style={[styles.modalCancel, { backgroundColor: colors.surface }]}
+              >
+                <Text style={[styles.modalCancelText, { color: colors.text }]}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                onPress={doDelete}
+                disabled={deleting}
+                style={[styles.modalDelete, { backgroundColor: colors.danger }]}
+              >
+                {deleting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalDeleteText}>Excluir</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -237,4 +284,38 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   saveText: { fontSize: 18, fontWeight: '700' },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalPreview: { marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
+  modalBody: { fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 22 },
+  modalActions: { flexDirection: 'row', gap: 12, alignSelf: 'stretch' },
+  modalCancel: {
+    flex: 1,
+    height: 50,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: { fontSize: 16, fontWeight: '700' },
+  modalDelete: {
+    flex: 1,
+    height: 50,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalDeleteText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
 });
