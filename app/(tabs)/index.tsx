@@ -281,6 +281,11 @@ export default function HomeScreen() {
                       ]}
                     />
                   </View>
+                  <Text style={[styles.budgetRemaining, { color: barColor }]}>
+                    {b.spent >= b.budget.limit_amount
+                      ? `Ultrapassou ${formatBRL(b.spent - b.budget.limit_amount)}`
+                      : `Faltam ${formatBRL(b.budget.limit_amount - b.spent)} para o limite`}
+                  </Text>
                 </View>
               </View>
             );
@@ -467,6 +472,7 @@ const styles = StyleSheet.create({
   catValue: { fontSize: 15, fontWeight: '700' },
   barTrack: { height: 7, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
+  budgetRemaining: { fontSize: 12.5, fontWeight: '600', marginTop: 4 },
   empty: { alignItems: 'center', paddingTop: 50, gap: 12 },
   emptyIcon: {
     width: 84,

@@ -121,9 +121,16 @@ export default function LimitesScreen() {
                     ]}
                   />
                 </View>
-                <Text style={[styles.percent, { color }]}>
-                  {Math.round(a.ratio * 100)}% utilizado
-                </Text>
+                <View style={styles.percentRow}>
+                  <Text style={[styles.percent, { color }]}>
+                    {Math.round(a.ratio * 100)}% utilizado
+                  </Text>
+                  <Text style={[styles.remaining, { color: colors.textMuted }]}>
+                    {a.spent >= a.budget.limit_amount
+                      ? `Ultrapassou ${formatBRL(a.spent - a.budget.limit_amount)}`
+                      : `Faltam ${formatBRL(a.budget.limit_amount - a.spent)}`}
+                  </Text>
+                </View>
               </View>
             );
           })}
@@ -253,7 +260,9 @@ const styles = StyleSheet.create({
   budgetSub: { fontSize: 13, marginTop: 2 },
   barTrack: { height: 8, borderRadius: 5, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 5 },
+  percentRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   percent: { fontSize: 13, fontWeight: '600' },
+  remaining: { fontSize: 13, fontWeight: '600' },
   formTitle: { fontSize: 18, fontWeight: '700', marginTop: 6 },
   formCard: { borderRadius: 18, padding: 16, gap: 12 },
   segment: { flexDirection: 'row', borderRadius: 12, padding: 4 },
