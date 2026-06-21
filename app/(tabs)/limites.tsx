@@ -5,6 +5,7 @@ import React,
   useRef,
   useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -54,12 +55,10 @@ export default function LimitesScreen() {
   }
 
   function confirmRemove(id: string) {
-    const msg = 'Remover este limite?';
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(msg)) deleteBudget(id);
-      return;
-    }
-    deleteBudget(id);
+    Alert.alert('Remover limite', 'Remover este limite?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: () => deleteBudget(id) },
+    ]);
   }
 
   return (

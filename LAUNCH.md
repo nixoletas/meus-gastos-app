@@ -1,9 +1,9 @@
 # 🚀 Checklist de lançamento — Meus Gastos
 
-Guia prático para colocar o app no ar (foco em **Android + Web**; Apple fica para depois).
+Guia prático para colocar o app no ar (foco em **Android**; iOS fica para depois).
 
 ## ✅ Já pronto no código
-- [x] Login sem senha (Google + código OTP por e-mail)
+- [x] Login só com Google (nativo, sem senha)
 - [x] Exclusão de conta **dentro do app** (digitando "excluir")
 - [x] Página web de exclusão de conta (`legal/exclusao-de-conta.html`) — exigida pelo Google
 - [x] Política de Privacidade e Termos de Uso (in-app + `legal/*.html` para hospedar)
@@ -12,15 +12,13 @@ Guia prático para colocar o app no ar (foco em **Android + Web**; Apple fica pa
 
 ## 🚨 Antes de publicar (bloqueadores)
 
-### 1. E-mail do OTP em produção (CRÍTICO)
-O e-mail padrão do Supabase é só para teste (limite ~3–4/hora). Configure **SMTP próprio**:
-- [ ] Criar conta em **Resend** (ou Amazon SES / Brevo) e um domínio remetente
-- [ ] Configurar SPF/DKIM no DNS do domínio
-- [ ] Supabase → **Authentication → SMTP Settings**: preencher host/usuário/senha
-- [ ] Testar o envio do código
+### 1. Google Sign-In em produção (CRÍTICO)
+- [ ] Google Cloud → client **Android** com `com.meusgastos.app` + SHA-1 do keystore EAS (`eas credentials`)
+- [ ] Supabase → **Authentication → Providers → Google** → adicionar os Client IDs Web e Android em *Authorized Client IDs*
+- [ ] Testar o login no build (`eas build -p android --profile preview`)
 
-### 2. Trocar os placeholders
-- [ ] `src/legal/content.ts` e `legal/*.html`: trocar `contato@meusgastos.app` pelo seu e-mail real
+### 2. Conferir os placeholders
+- [x] E-mail de contato (`m3usgastos@gmail.com`) em `src/legal/content.ts` e `legal/*.html`
 - [ ] Conferir `app.json` → `version` e `android.package` (`com.meusgastos.app`)
 
 ### 3. Hospedar as páginas legais
@@ -59,17 +57,10 @@ eas build --platform android --profile production    # AAB para a loja
 eas submit --platform android --profile production
 ```
 
-## 🌐 Web
-```bash
-npm run build:web      # gera dist/ com OpenGraph
-```
-- [ ] Publicar `dist/` em Vercel/Netlify
-- [ ] Adicionar a URL final nas Redirect URLs do Supabase (Google)
-
 ## 🔭 Próximos passos (pós-lançamento)
 - [ ] Monitoramento de erros (Sentry)
 - [ ] Analytics básico (ex.: PostHog)
-- [ ] Edição de nome/avatar para quem entra por e-mail
+- [ ] iOS (App Store)
 - [ ] Tratamento visual de erros de rede
 - [ ] Testes automatizados dos utilitários (moeda/data)
 - [ ] **Monetização** (relatório por e-mail, freemium): usar In-App Purchase via **RevenueCat**

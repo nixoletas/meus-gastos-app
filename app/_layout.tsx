@@ -46,7 +46,7 @@ function AuthGate() {
 
     const seg = segments[0] as string | undefined;
     // Telas de onde um usuário logado é levado de volta ao app.
-    const authScreens = ['login', 'otp', 'onboarding', 'config'];
+    const authScreens = ['login', 'onboarding', 'config'];
     // Telas acessíveis sem sessão (inclui /legal para ler antes de aceitar).
     const publicScreens = [...authScreens, 'legal'];
 
@@ -94,7 +94,6 @@ function AuthGate() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="login" />
-        <Stack.Screen name="otp" />
         <Stack.Screen name="config" />
         <Stack.Screen name="legal" />
         <Stack.Screen

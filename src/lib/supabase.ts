@@ -1,7 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -22,10 +21,8 @@ export const supabase = createClient(
       storage: AsyncStorage,
       autoRefreshToken: true,
       persistSession: true,
-      // Só faz sentido detectar sessão na URL no ambiente web (OAuth/redirect).
-      detectSessionInUrl: Platform.OS === 'web',
-      // PKCE permite trocar o "code" do OAuth por sessão no mobile.
-      flowType: 'pkce',
+      // App é só mobile; não há redirect/URL para detectar sessão.
+      detectSessionInUrl: false,
     },
   }
 );

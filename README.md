@@ -155,15 +155,13 @@ supabase/schema.sql        # Schema do banco (rodar no Supabase)
 
 ## 📦 Gerar build de produção
 
-- **Web (com OpenGraph):**
+- **Android (EAS):**
   ```bash
-  npm run build:web
+  eas build --platform android --profile preview     # APK de teste
+  eas build --platform android --profile production  # .aab para a Play Store
   ```
-  Roda o `expo export` e injeta as meta tags de OpenGraph/SEO no `dist/index.html`.
-  Os arquivos saem em `dist/` e podem ser publicados em qualquer hospedagem
-  estática (Vercel, Netlify, GitHub Pages...).
 
-- **Gerar ícones/splash/OpenGraph** a partir do mascote:
+- **Gerar ícones/splash** a partir do mascote:
   ```bash
   npm run gen:assets
   ```

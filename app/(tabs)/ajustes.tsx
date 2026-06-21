@@ -8,7 +8,6 @@ import { ActivityIndicator,
   Image,
   Linking,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useAuth } from '../../src/context/AuthContext';
-import { CONTACT_EMAIL } from '../../src/legal/content';
+import { CONTACT_EMAIL, FEEDBACK_FORM_URL } from '../../src/legal/content';
 import { ThemePreference, useTheme } from '../../src/theme/ThemeContext';
 
 export default function AjustesScreen() {
@@ -62,8 +61,7 @@ export default function AjustesScreen() {
     setDeleting(false);
     if (error) {
       setConfirmOpen(false);
-      if (Platform.OS === 'web') window.alert(error);
-      else Alert.alert('Erro', error);
+      Alert.alert('Erro', error);
     }
     // Em caso de sucesso, o signOut redireciona automaticamente para o login.
   }
@@ -164,6 +162,17 @@ export default function AjustesScreen() {
           <MaterialCommunityIcons name="file-document-outline" size={20} color={colors.textMuted} />
           <Text style={[styles.aboutText, { color: colors.text }]}>Termos de Uso</Text>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <Pressable
+          onPress={() => Linking.openURL(FEEDBACK_FORM_URL)}
+          style={styles.aboutRow}
+        >
+          <MaterialCommunityIcons name="message-text-outline" size={20} color={colors.textMuted} />
+          <Text style={[styles.aboutText, { color: colors.text }]}>
+            Reclamar, pedir feature ou tirar dúvida
+          </Text>
+          <MaterialCommunityIcons name="open-in-new" size={18} color={colors.textMuted} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <Pressable

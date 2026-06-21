@@ -7,9 +7,11 @@
  * reais antes de publicar.
  */
 
-export const CONTACT_EMAIL = 'contato@meusgastos.app';
+export const CONTACT_EMAIL = 'm3usgastos@gmail.com';
+/** Formulário para reclamações, pedidos de feature e dúvidas. */
+export const FEEDBACK_FORM_URL = 'https://forms.gle/od4DdV7uanvcwxTh8';
 export const CONTROLLER = 'a equipe do Meus Gastos';
-export const LAST_UPDATED = '19 de junho de 2026';
+export const LAST_UPDATED = '20 de junho de 2026';
 
 export type LegalSection = { title: string; body: string[] };
 
@@ -23,7 +25,7 @@ export const PRIVACY: LegalSection[] = [
   {
     title: 'Quais dados coletamos',
     body: [
-      'Dados de conta: seu e-mail e, se você entrar com o Google, seu nome e foto de perfil.',
+      'Dados de conta: ao entrar com o Google, recebemos seu e-mail, nome e foto de perfil.',
       'Dados que você cria no app: seus gastos (valor, data, nota), categorias, subcategorias e limites de gasto.',
       'Dados técnicos básicos necessários para o funcionamento (ex.: identificador da sessão).',
       'Não coletamos dados bancários, número de cartão, CPF ou localização.',
@@ -32,7 +34,7 @@ export const PRIVACY: LegalSection[] = [
   {
     title: 'Para que usamos',
     body: [
-      'Para autenticar seu acesso e manter sua sessão.',
+      'Para autenticar seu acesso (login com Google) e manter sua sessão.',
       'Para armazenar e sincronizar seus lançamentos entre seus dispositivos.',
       'Para gerar os gráficos, resumos e alertas de limite dentro do app.',
     ],
@@ -47,7 +49,7 @@ export const PRIVACY: LegalSection[] = [
     title: 'Com quem compartilhamos',
     body: [
       'Supabase: provedor de autenticação e banco de dados onde seus dados ficam armazenados.',
-      'Google: apenas se você optar por entrar com a conta Google.',
+      'Google: usado para autenticar seu acesso (login com a conta Google).',
       'Não vendemos seus dados nem os usamos para publicidade.',
     ],
   },
@@ -102,7 +104,7 @@ export const TERMS: LegalSection[] = [
   {
     title: 'Sua conta',
     body: [
-      'Você é responsável por manter o acesso ao seu e-mail/conta Google usados para entrar.',
+      'Você é responsável por manter o acesso à conta Google usada para entrar.',
       'Você é responsável pelas informações que cadastra no app.',
     ],
   },
