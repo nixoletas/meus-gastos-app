@@ -36,10 +36,17 @@
       "expo-secure-store",
       "@react-native-community/datetimepicker",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7cba30be-2c9e-4bc3-a472-f12ff7d706b4"
+      }
     }
   }
 }
