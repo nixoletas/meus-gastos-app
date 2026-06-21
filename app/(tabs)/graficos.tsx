@@ -16,22 +16,26 @@ import { PeriodSwitcher } from '../../src/components/PeriodSwitcher';
 import { PieChart, PieSlice } from '../../src/components/PieChart';
 import { useData } from '../../src/context/DataContext';
 import { useTheme } from '../../src/theme/ThemeContext';
+import { useRouter } from 'expo-router';
 import {
   subcategoryBreakdown,
+  subcategoryExpenses,
   totalsByCategory,
   totalForPeriod,
 } from '../../src/utils/analytics';
 import { formatBRL } from '../../src/utils/currency';
-import { Period } from '../../src/utils/date';
+import { Period, relativeDayLabel } from '../../src/utils/date';
 
 export default function GraficosScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { expenses, categories } = useData();
 
   const [period, setPeriod] = useState<Period>('month');
   const [refDate, setRefDate] = useState(new Date());
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedSubKey, setExpandedSubKey] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const byCategory = useMemo(
@@ -136,6 +140,7 @@ export default function GraficosScreen() {
                     disabled={!item.categoryId}
                     onPress={() => {
                       setExpandedId(expanded ? null : item.categoryId);
+                      setExpandedSubKey(null);
                     }}
                   >
                     <CategoryIcon
@@ -175,34 +180,82 @@ export default function GraficosScreen() {
                     )}
                   </Pressable>
 
-                  {/* Detalhe por subcategoria */}
+                  {/* Detalhe por subcategoria (expansível até o gasto individual) */}
                   {expanded && (
                     <View style={[styles.subList, { borderTopColor: colors.border }]}>
-                      {subs.map((s) => (
-                        <View key={s.key} style={styles.subRow}>
-                          <View
-                            style={[
-                              styles.subDot,
-                              { backgroundColor: hexWithAlpha(catColor, 0.16) },
-                            ]}
-                          >
-                            <AppIcon
-                              icon={s.sub?.icon ?? 'tag'}
-                              size={15}
-                              color={catColor}
-                            />
+                      {subs.map((s) => {
+                        const subOpen = expandedSubKey === s.key;
+                        const items =
+                          subOpen && item.categoryId
+                            ? subcategoryExpenses(
+                                expenses,
+                                categories,
+                                item.categoryId,
+                                s.key,
+                                refDate,
+                                period
+                              )
+                            : [];
+                        return (
+                          <View key={s.key}>
+                            <Pressable
+                              style={styles.subRow}
+                              onPress={() => setExpandedSubKey(subOpen ? null : s.key)}
+                            >
+                              <View
+                                style={[
+                                  styles.subDot,
+                                  { backgroundColor: hexWithAlpha(catColor, 0.16) },
+                                ]}
+                              >
+                                <AppIcon icon={s.sub?.icon ?? 'tag'} size={15} color={catColor} />
+                              </View>
+                              <Text style={[styles.subName, { color: colors.text }]} numberOfLines={1}>
+                                {s.sub?.name ?? 'Sem subcategoria'}
+                              </Text>
+                              <Text style={[styles.subPercent, { color: colors.textMuted }]}>
+                                {Math.round(s.percent * 100)}%
+                              </Text>
+                              <Text style={[styles.subValue, { color: colors.text }]}>
+                                {formatBRL(s.total)}
+                              </Text>
+                              <MaterialCommunityIcons
+                                name={subOpen ? 'chevron-up' : 'chevron-down'}
+                                size={18}
+                                color={colors.textMuted}
+                              />
+                            </Pressable>
+
+                            {subOpen && (
+                              <View style={styles.expenseList}>
+                                {items.map((e) => (
+                                  <Pressable
+                                    key={e.id}
+                                    style={styles.expenseRow}
+                                    onPress={() =>
+                                      router.push({ pathname: '/novo', params: { id: e.id } })
+                                    }
+                                  >
+                                    <View style={[styles.expenseDot, { backgroundColor: catColor }]} />
+                                    <Text
+                                      style={[styles.expenseName, { color: colors.text }]}
+                                      numberOfLines={1}
+                                    >
+                                      {e.note?.trim() || (s.sub?.name ?? 'Sem subcategoria')}
+                                    </Text>
+                                    <Text style={[styles.expenseDate, { color: colors.textMuted }]}>
+                                      {relativeDayLabel(e.occurred_at)}
+                                    </Text>
+                                    <Text style={[styles.expenseValue, { color: colors.text }]}>
+                                      {formatBRL(e.amount)}
+                                    </Text>
+                                  </Pressable>
+                                ))}
+                              </View>
+                            )}
                           </View>
-                          <Text style={[styles.subName, { color: colors.text }]} numberOfLines={1}>
-                            {s.sub?.name ?? 'Sem subcategoria'}
-                          </Text>
-                          <Text style={[styles.subPercent, { color: colors.textMuted }]}>
-                            {Math.round(s.percent * 100)}%
-                          </Text>
-                          <Text style={[styles.subValue, { color: colors.text }]}>
-                            {formatBRL(s.total)}
-                          </Text>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </View>
                   )}
                 </View>
@@ -253,6 +306,12 @@ const styles = StyleSheet.create({
   subName: { flex: 1, fontSize: 14, fontWeight: '500' },
   subPercent: { fontSize: 12, fontWeight: '600', width: 36, textAlign: 'right' },
   subValue: { fontSize: 14, fontWeight: '700', minWidth: 70, textAlign: 'right' },
+  expenseList: { paddingLeft: 38, paddingBottom: 4, gap: 1 },
+  expenseRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
+  expenseDot: { width: 6, height: 6, borderRadius: 3 },
+  expenseName: { flex: 1, fontSize: 13 },
+  expenseDate: { fontSize: 12, fontWeight: '500' },
+  expenseValue: { fontSize: 13, fontWeight: '700', minWidth: 70, textAlign: 'right' },
   legendTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   legendName: { fontSize: 15, fontWeight: '600', flex: 1, marginRight: 8 },
   legendValue: { fontSize: 15, fontWeight: '700' },
