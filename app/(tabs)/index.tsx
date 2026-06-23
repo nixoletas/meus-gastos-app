@@ -33,7 +33,7 @@ import {
 import { formatBRL } from '../../src/utils/currency';
 import { dateHeaderLabel, Period, shiftPeriod } from '../../src/utils/date';
 
-type DaySection = { title: string; key: string; data: Expense[] };
+type DaySection = { title: string; key: string; total: number; data: Expense[] };
 
 export default function HomeScreen() {
   const { colors, isDark } = useTheme();
@@ -79,11 +79,12 @@ export default function HomeScreen() {
     for (const e of periodExpenses) {
       let section = byDate.get(e.occurred_at);
       if (!section) {
-        section = { title: dateHeaderLabel(e.occurred_at), key: e.occurred_at, data: [] };
+        section = { title: dateHeaderLabel(e.occurred_at), key: e.occurred_at, total: 0, data: [] };
         byDate.set(e.occurred_at, section);
         groups.push(section);
       }
       section.data.push(e);
+      section.total += e.amount;
     }
     return groups;
   }, [periodExpenses]);
@@ -339,9 +340,14 @@ export default function HomeScreen() {
   );
 
   const renderSectionHeader = ({ section }: { section: DaySection }) => (
-    <Text style={[styles.dateHeader, { color: colors.textMuted }]}>
-      {section.title}
-    </Text>
+    <View style={styles.dateHeaderRow}>
+      <Text style={[styles.dateHeader, { color: colors.textMuted }]}>
+        {section.title}
+      </Text>
+      <Text style={[styles.dateHeaderTotal, { color: colors.textMuted }]}>
+        {formatBRL(section.total)}
+      </Text>
+    </View>
   );
 
   return (
@@ -434,13 +440,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
+  dateHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    marginBottom: 6,
+    marginHorizontal: 4,
+  },
   dateHeader: {
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.2,
-    marginTop: 6,
-    marginBottom: 6,
-    marginLeft: 4,
+  },
+  dateHeaderTotal: {
+    fontSize: 11,
+    fontWeight: '600',
+    opacity: 0.8,
   },
   sectionAction: { fontSize: 14, fontWeight: '700' },
   budgetCta: {
