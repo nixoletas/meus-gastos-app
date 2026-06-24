@@ -7,7 +7,7 @@
  * reais antes de publicar.
  */
 
-export const CONTACT_EMAIL = 'm3usgastos@gmail.com';
+export const CONTACT_EMAIL = 'contato@meusgastos.dev.br';
 /** Formulário para reclamações, pedidos de feature e dúvidas. */
 export const FEEDBACK_FORM_URL = 'https://forms.gle/od4DdV7uanvcwxTh8';
 export const CONTROLLER = 'a equipe do Meus Gastos';

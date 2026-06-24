@@ -1,10 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import React,
-  { useState } from 'react';
+  { useRef, useState } from 'react';
 import { ActivityIndicator,
   Alert,
+  Animated,
   Image,
   Linking,
   Modal,
@@ -30,6 +32,17 @@ export default function AjustesScreen() {
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
+  const [emailCopied, setEmailCopied] = useState(false);
+  const copyAnim = useRef(new Animated.Value(0)).current;
+
+  // Copia o e-mail de contato pro clipboard e dispara a animação de "copiado".
+  async function copyContactEmail() {
+    await Clipboard.setStringAsync(CONTACT_EMAIL);
+    setEmailCopied(true);
+    copyAnim.setValue(0);
+    Animated.spring(copyAnim, { toValue: 1, friction: 5, useNativeDriver: true }).start();
+    setTimeout(() => setEmailCopied(false), 1800);
+  }
 
   // Só libera a exclusão quando a pessoa digita exatamente "excluir".
   const canConfirmDelete = confirmText.trim().toLowerCase() === 'excluir';
@@ -175,13 +188,32 @@ export default function AjustesScreen() {
           <MaterialCommunityIcons name="open-in-new" size={18} color={colors.textMuted} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <Pressable
-          onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)}
-          style={styles.aboutRow}
-        >
-          <MaterialCommunityIcons name="email-outline" size={20} color={colors.textMuted} />
-          <Text style={[styles.aboutText, { color: colors.text }]}>Falar com a gente</Text>
-          <MaterialCommunityIcons name="open-in-new" size={18} color={colors.textMuted} />
+        <Pressable onPress={copyContactEmail} style={styles.aboutRow}>
+          <MaterialCommunityIcons
+            name={emailCopied ? 'check-circle' : 'email-outline'}
+            size={20}
+            color={emailCopied ? colors.primary : colors.textMuted}
+          />
+          <Text style={[styles.aboutText, { color: emailCopied ? colors.primary : colors.text }]}>
+            {emailCopied ? 'E-mail copiado!' : 'Falar com a gente'}
+          </Text>
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  scale: emailCopied
+                    ? copyAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] })
+                    : 1,
+                },
+              ],
+            }}
+          >
+            <MaterialCommunityIcons
+              name={emailCopied ? 'check' : 'content-copy'}
+              size={18}
+              color={emailCopied ? colors.primary : colors.textMuted}
+            />
+          </Animated.View>
         </Pressable>
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <View style={styles.aboutRow}>
