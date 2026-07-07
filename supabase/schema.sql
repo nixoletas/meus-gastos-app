@@ -60,18 +60,29 @@ create unique index if not exists budgets_unique_global
   on public.budgets (user_id, period)
   where category_id is null;
 
+-- ----------------------------------------------------------------------------
+-- Preferências do usuário (uma linha por usuário), sincronizadas entre
+-- web e app — ex.: ocultar o valor total na tela inicial.
+-- ----------------------------------------------------------------------------
+create table if not exists public.user_settings (
+  user_id     uuid primary key references auth.users (id) on delete cascade,
+  hide_value  boolean not null default false,
+  updated_at  timestamptz not null default now()
+);
+
 -- ============================================================================
 --  Row Level Security: cada usuário só enxerga e altera os próprios dados.
 -- ============================================================================
-alter table public.categories enable row level security;
-alter table public.expenses   enable row level security;
-alter table public.budgets    enable row level security;
+alter table public.categories    enable row level security;
+alter table public.expenses      enable row level security;
+alter table public.budgets       enable row level security;
+alter table public.user_settings enable row level security;
 
 do $$
 declare
   t text;
 begin
-  foreach t in array array['categories', 'expenses', 'budgets'] loop
+  foreach t in array array['categories', 'expenses', 'budgets', 'user_settings'] loop
     execute format('drop policy if exists "%1$s_select" on public.%1$s;', t);
     execute format('drop policy if exists "%1$s_insert" on public.%1$s;', t);
     execute format('drop policy if exists "%1$s_update" on public.%1$s;', t);
@@ -115,7 +126,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['expenses', 'categories', 'budgets'] loop
+  foreach t in array array['expenses', 'categories', 'budgets', 'user_settings'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime'

@@ -39,7 +39,16 @@ export default function HomeScreen() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { expenses, categories, budgets, getCategory, loading, seeding } = useData();
+  const {
+    expenses,
+    categories,
+    budgets,
+    getCategory,
+    loading,
+    seeding,
+    hideValue,
+    setHideValue,
+  } = useData();
   const { session } = useAuth();
 
   // Primeiro nome: usa o nome do Google quando houver; senão, deriva do e-mail.
@@ -64,7 +73,6 @@ export default function HomeScreen() {
 
   const [period, setPeriod] = useState<Period>('month');
   const [refDate, setRefDate] = useState(new Date());
-  const [hideValue, setHideValue] = useState(false);
 
   const periodExpenses = useMemo(
     () => expensesForPeriod(expenses, refDate, period),
@@ -145,7 +153,7 @@ export default function HomeScreen() {
             Total gasto {period === 'month' ? 'no mês' : 'no ano'}
           </Text>
           <Pressable
-            onPress={() => setHideValue((v) => !v)}
+            onPress={() => setHideValue(!hideValue)}
             hitSlop={10}
             style={styles.totalBadge}
           >
