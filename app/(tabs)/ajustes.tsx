@@ -19,6 +19,7 @@ import { Text, TextInput } from '../../src/theme/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
+import { ReportExportModal } from '../../src/components/ReportExportModal';
 import { useAuth } from '../../src/context/AuthContext';
 import { CONTACT_EMAIL, FEEDBACK_FORM_URL } from '../../src/legal/content';
 import { ThemePreference, useTheme } from '../../src/theme/ThemeContext';
@@ -33,6 +34,7 @@ export default function AjustesScreen() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [emailCopied, setEmailCopied] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const copyAnim = useRef(new Animated.Value(0)).current;
 
   // Copia o e-mail de contato pro clipboard e dispara a animação de "copiado".
@@ -153,6 +155,23 @@ export default function AjustesScreen() {
         >
           <MaterialCommunityIcons name="logout" size={20} color={colors.text} />
           <Text style={[styles.logoutText, { color: colors.text }]}>Sair</Text>
+        </Pressable>
+      </View>
+
+      {/* Relatórios */}
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>RELATÓRIOS</Text>
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <Pressable onPress={() => setReportOpen(true)} style={styles.reportRow}>
+          <View style={[styles.linkIcon, { backgroundColor: colors.primarySoft }]}>
+            <MaterialCommunityIcons name="file-excel" size={22} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.linkTitle, { color: colors.text }]}>Exportar para Excel</Text>
+            <Text style={[styles.linkSub, { color: colors.textMuted }]} numberOfLines={1}>
+              Relatório mensal ou anual no seu e-mail
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
         </Pressable>
       </View>
 
@@ -319,6 +338,12 @@ export default function AjustesScreen() {
           </View>
         </View>
       </Modal>
+
+      <ReportExportModal
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        userEmail={session?.user.email}
+      />
     </ScrollView>
   );
 }
@@ -363,6 +388,7 @@ const styles = StyleSheet.create({
   linkTitle: { fontSize: 16, fontWeight: '600' },
   linkSub: { fontSize: 13, marginTop: 2 },
   accountRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  reportRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
