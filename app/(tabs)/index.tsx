@@ -1,9 +1,10 @@
 import {
   MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useScrollToTop } from 'expo-router';
 import React,
   { useMemo,
+  useRef,
   useState } from 'react';
 import {
   ActivityIndicator,
@@ -39,6 +40,10 @@ export default function HomeScreen() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  // Tocar na aba já ativa volta ao topo em vez de não fazer nada.
+  const listRef = useRef<SectionList<Expense, DaySection>>(null);
+  useScrollToTop(listRef);
   const {
     expenses,
     categories,
@@ -361,6 +366,7 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <SectionList
+        ref={listRef}
         sections={sections}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}

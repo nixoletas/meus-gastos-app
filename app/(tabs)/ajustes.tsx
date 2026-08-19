@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
+import { useRouter, useScrollToTop } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import React,
   { useRef, useState } from 'react';
@@ -36,6 +36,10 @@ export default function AjustesScreen() {
   const [emailCopied, setEmailCopied] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const copyAnim = useRef(new Animated.Value(0)).current;
+
+  // Tocar na aba já ativa volta ao topo em vez de não fazer nada.
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
 
   // Copia o e-mail de contato pro clipboard e dispara a animação de "copiado".
   async function copyContactEmail() {
@@ -83,6 +87,7 @@ export default function AjustesScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
       showsVerticalScrollIndicator={false}

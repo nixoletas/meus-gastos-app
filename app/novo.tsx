@@ -27,12 +27,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../src/components/AppIcon';
 import { CalendarModal } from '../src/components/CalendarModal';
 import { hexWithAlpha } from '../src/components/CategoryIcon';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { PressableScale } from '../src/components/PressableScale';
+import { SuccessFlash } from '../src/components/SuccessFlash';
 import { SuccessOverlay } from '../src/components/SuccessOverlay';
 import { useData } from '../src/context/DataContext';
 import { useTheme } from '../src/theme/ThemeContext';
 import { formatBRL, maskCurrencyInput, rawToReais, reaisToRaw } from '../src/utils/currency';
 import { fromISODate, relativeDayLabel, toISODate } from '../src/utils/date';
+
+/**
+ * Última data usada num novo gasto, junto do dia em que foi escolhida.
+ *
+ * Quem está lançando um mês atrasado de uma vez não reabre o calendário a cada
+ * item. Só vale dentro do mesmo dia: no celular o app fica aberto por dias em
+ * segundo plano, e sem isso o lançamento de amanhã cairia calado numa data
+ * velha. (Na web o mesmo papel é feito pelo `sessionStorage`, que morre com a aba.)
+ */
+let lastUsed: { date: string; on: string } | null = null;
+
+function readRememberedDate(): string | null {
+  if (!lastUsed) return null;
+  return lastUsed.on === toISODate(new Date()) ? lastUsed.date : null;
+}
 
 export default function NovoGastoScreen() {
   const { colors } = useTheme();
@@ -53,10 +70,18 @@ export default function NovoGastoScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [subcategoryId, setSubcategoryId] = useState<string | null>(null);
   const [note, setNote] = useState('');
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(() => {
+    if (editing) return fromISODate(editing.occurred_at);
+    const remembered = readRememberedDate();
+    return remembered ? fromISODate(remembered) : new Date();
+  });
   const [showSuccess, setShowSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  /** `id` novo a cada lançamento força a animação a rodar de novo. */
+  const [flash, setFlash] = useState<{ id: number; label: string } | null>(null);
   const amountRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -116,35 +141,56 @@ export default function NovoGastoScreen() {
 
   const canSave = amount > 0 && categoryId !== null && !saving;
 
-  async function handleSave() {
+  /**
+   * `keepOpen` mantém a tela aberta com a data e a categoria, para lançar
+   * vários gastos seguidos sem refazer a escolha a cada um.
+   */
+  async function handleSave({ keepOpen = false } = {}) {
     if (!canSave) {
       return;
     }
     setSaving(true);
+    const iso = toISODate(date);
     const payload = {
       amount,
       note: note.trim() || null,
       category_id: categoryId,
       subcategory_id: subcategoryId,
-      occurred_at: toISODate(date),
+      occurred_at: iso,
     };
 
     if (editing) {
       await updateExpense(editing.id, payload);
       router.back();
-    } else {
-      const created = await addExpense(payload);
-      if (created) {
-        setShowSuccess(true); // dispara a comemoração
-      } else {
-        setSaving(false);
-      }
+      return;
     }
+
+    const created = await addExpense(payload);
+    if (!created) {
+      setSaving(false);
+      return;
+    }
+    lastUsed = { date: iso, on: toISODate(new Date()) };
+
+    if (keepOpen) {
+      // Comemoração leve: o overlay cheio encerra o fluxo, e aqui ele continua.
+      setFlash({ id: Date.now(), label: `${formatBRL(amount)} lançado` });
+      setRaw('');
+      setNote('');
+      setSaving(false);
+      amountRef.current?.focus();
+      return;
+    }
+
+    setShowSuccess(true); // dispara a comemoração
   }
 
   async function handleDelete() {
     if (!editing) return;
+    setDeleting(true);
     await deleteExpense(editing.id);
+    setDeleting(false);
+    setConfirmDelete(false);
     router.back();
   }
 
@@ -179,7 +225,7 @@ export default function NovoGastoScreen() {
             {editing ? 'Editar gasto' : 'Novo gasto'}
           </Text>
           {editing ? (
-            <Pressable onPress={handleDelete} hitSlop={12} style={styles.headerBtn}>
+            <Pressable onPress={() => setConfirmDelete(true)} hitSlop={12} style={styles.headerBtn}>
               <MaterialCommunityIcons name="trash-can-outline" size={24} color={colors.danger} />
             </Pressable>
           ) : (
@@ -373,8 +419,26 @@ export default function NovoGastoScreen() {
 
         {/* Botão salvar */}
         <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+          {/* Atalho pra quem está pondo o mês em dia: grava e já reabre em branco. */}
+          {!editing && (
+            <PressableScale
+              onPress={() => handleSave({ keepOpen: true })}
+              disabled={!canSave}
+              scaleTo={0.97}
+              style={[
+                styles.againBtn,
+                { backgroundColor: colors.surface, opacity: canSave ? 1 : 0.5 },
+              ]}
+            >
+              <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
+              <Text style={[styles.againText, { color: colors.text }]}>
+                Salvar e lançar outro
+              </Text>
+            </PressableScale>
+          )}
+
           <PressableScale
-            onPress={handleSave}
+            onPress={() => handleSave()}
             disabled={!canSave}
             scaleTo={0.97}
             style={[
@@ -397,6 +461,11 @@ export default function NovoGastoScreen() {
             </Text>
           </PressableScale>
         </View>
+
+        {/* Dentro do KeyboardAvoidingView: com o teclado aberto o aviso sobe junto. */}
+        {flash && (
+          <SuccessFlash key={flash.id} message={flash.label} onDone={() => setFlash(null)} />
+        )}
       </KeyboardAvoidingView>
 
       <SuccessOverlay
@@ -414,6 +483,15 @@ export default function NovoGastoScreen() {
         selected={date}
         onSelect={setDate}
         onClose={() => setCalendarOpen(false)}
+      />
+
+      <ConfirmDialog
+        visible={confirmDelete}
+        title="Excluir este gasto?"
+        message="O lançamento some do histórico e dos gráficos. Não dá pra desfazer."
+        busy={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
       />
     </SafeAreaView>
   );
@@ -515,7 +593,20 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     borderTopWidth: 1,
+    gap: 10,
   },
+  againBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 44,
+    borderRadius: 14,
+    maxWidth: 640,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  againText: { fontSize: 15, fontWeight: '700' },
   saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',

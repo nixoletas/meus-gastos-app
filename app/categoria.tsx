@@ -6,9 +6,7 @@ import React,
   { useEffect,
   useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -19,6 +17,7 @@ import { Text, TextInput } from '../src/theme/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryIcon } from '../src/components/CategoryIcon';
 import { ColorPicker } from '../src/components/ColorPicker';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { IconPicker } from '../src/components/IconPicker';
 import { PressableScale } from '../src/components/PressableScale';
 import { useData } from '../src/context/DataContext';
@@ -186,58 +185,28 @@ export default function CategoriaScreen() {
       />
 
       {/* Confirmação de exclusão */}
-      <Modal
+      <ConfirmDialog
         visible={confirmOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => !deleting && setConfirmOpen(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
-            <View style={styles.modalPreview}>
-              <CategoryIcon
-                icon={editing?.icon ?? icon}
-                color={editing?.color ?? (isSub ? parent?.color ?? color : color)}
-                size={64}
-                solid
-              />
-            </View>
-
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Excluir {isSub ? 'subcategoria' : 'categoria'} “{editing?.name ?? name}”?
-            </Text>
-            <Text style={[styles.modalBody, { color: colors.textMuted }]}>
-              {isSub
-                ? 'Os gastos lançados nela continuam, mas ficam sem subcategoria.'
-                : subCount > 0
-                  ? `As ${subCount} subcategorias também serão removidas. Os gastos continuam, mas ficam sem categoria.`
-                  : 'Os gastos lançados nela continuam, mas ficam sem categoria.'}
-              {' '}Esta ação não pode ser desfeita.
-            </Text>
-
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setConfirmOpen(false)}
-                disabled={deleting}
-                style={[styles.modalCancel, { backgroundColor: colors.surface }]}
-              >
-                <Text style={[styles.modalCancelText, { color: colors.text }]}>Cancelar</Text>
-              </Pressable>
-              <Pressable
-                onPress={doDelete}
-                disabled={deleting}
-                style={[styles.modalDelete, { backgroundColor: colors.danger }]}
-              >
-                {deleting ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.modalDeleteText}>Excluir</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        title={`Excluir ${isSub ? 'subcategoria' : 'categoria'} “${editing?.name ?? name}”?`}
+        message={`${
+          isSub
+            ? 'Os gastos lançados nela continuam, mas ficam sem subcategoria.'
+            : subCount > 0
+              ? `As ${subCount} subcategorias também serão removidas. Os gastos continuam, mas ficam sem categoria.`
+              : 'Os gastos lançados nela continuam, mas ficam sem categoria.'
+        } Esta ação não pode ser desfeita.`}
+        preview={
+          <CategoryIcon
+            icon={editing?.icon ?? icon}
+            color={editing?.color ?? (isSub ? parent?.color ?? color : color)}
+            size={64}
+            solid
+          />
+        }
+        busy={deleting}
+        onConfirm={doDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -284,38 +253,4 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   saveText: { fontSize: 18, fontWeight: '700' },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 380,
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-  },
-  modalPreview: { marginBottom: 16 },
-  modalTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
-  modalBody: { fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 22 },
-  modalActions: { flexDirection: 'row', gap: 12, alignSelf: 'stretch' },
-  modalCancel: {
-    flex: 1,
-    height: 50,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCancelText: { fontSize: 16, fontWeight: '700' },
-  modalDelete: {
-    flex: 1,
-    height: 50,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalDeleteText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
 });

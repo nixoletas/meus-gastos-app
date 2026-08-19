@@ -1,9 +1,12 @@
 import {
   MaterialCommunityIcons } from '@expo/vector-icons';
 import React,
-  { useMemo,
+  { useEffect,
+  useMemo,
+  useRef,
   useState } from 'react';
-import { Pressable,
+import { LayoutChangeEvent,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -16,7 +19,7 @@ import { PeriodSwitcher } from '../../src/components/PeriodSwitcher';
 import { PieChart, PieSlice } from '../../src/components/PieChart';
 import { useData } from '../../src/context/DataContext';
 import { useTheme } from '../../src/theme/ThemeContext';
-import { useRouter } from 'expo-router';
+import { useRouter, useScrollToTop } from 'expo-router';
 import {
   subcategoryBreakdown,
   subcategoryExpenses,
@@ -34,9 +37,40 @@ export default function GraficosScreen() {
 
   const [period, setPeriod] = useState<Period>('month');
   const [refDate, setRefDate] = useState(new Date());
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedSubKey, setExpandedSubKey] = useState<string | null>(null);
+  /** Categoria em foco — a mesma pela fatia do donut e pela linha da legenda. */
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
+
+  // Posição das linhas da legenda, pra trazer a escolhida pela pizza até a vista.
+  const legendTop = useRef(0);
+  const rowOffsets = useRef(new Map<string, number>());
+
+  function selectSlice(key: string | null) {
+    setSelectedKey(key);
+    setExpandedSubKey(null);
+  }
+
+  // Escolher pela pizza precisa trazer a linha da legenda pra vista. Espera um
+  // tico porque a linha selecionada abre as subcategorias e reposiciona as outras.
+  useEffect(() => {
+    if (!selectedKey) return;
+    const timer = setTimeout(() => {
+      const offset = rowOffsets.current.get(selectedKey);
+      if (offset == null) return;
+      scrollRef.current?.scrollTo({
+        y: Math.max(legendTop.current + offset - 12, 0),
+        animated: true,
+      });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [selectedKey]);
+
+  function rememberRow(key: string, e: LayoutChangeEvent) {
+    rowOffsets.current.set(key, e.nativeEvent.layout.y);
+  }
 
   const byCategory = useMemo(
     () => totalsByCategory(expenses, categories, refDate, period),
@@ -58,6 +92,7 @@ export default function GraficosScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
       showsVerticalScrollIndicator={false}
@@ -91,7 +126,7 @@ export default function GraficosScreen() {
               size={230}
               thickness={36}
               selectedKey={selectedKey}
-              onSelectSlice={setSelectedKey}
+              onSelectSlice={selectSlice}
             >
               {selected ? (
                 <>
@@ -125,23 +160,49 @@ export default function GraficosScreen() {
             </PieChart>
           </View>
 
-          <View style={styles.legend}>
+          {selectedKey !== null && (
+            <Pressable
+              onPress={() => selectSlice(null)}
+              style={[styles.clearBtn, { backgroundColor: colors.surface }]}
+            >
+              <MaterialCommunityIcons name="close" size={14} color={colors.textMuted} />
+              <Text style={[styles.clearText, { color: colors.textMuted }]}>Limpar filtro</Text>
+            </Pressable>
+          )}
+
+          <View
+            style={styles.legend}
+            onLayout={(e) => {
+              legendTop.current = e.nativeEvent.layout.y;
+            }}
+          >
             {byCategory.map((item) => {
+              const rowKey = item.categoryId ?? 'sem';
               const catColor = item.category?.color ?? colors.textMuted;
-              const expanded = !!item.categoryId && expandedId === item.categoryId;
+              const active = selectedKey === rowKey;
+              // Com uma categoria em foco, as outras recuam em vez de sumir.
+              const dimmed = selectedKey !== null && !active;
+              const expanded = active && !!item.categoryId;
               const subs =
                 expanded && item.categoryId
                   ? subcategoryBreakdown(expenses, categories, item.categoryId, refDate, period)
                   : [];
               return (
-                <View key={item.categoryId ?? 'sem'} style={[styles.legendRow, { backgroundColor: colors.card }]}>
+                <View
+                  key={rowKey}
+                  onLayout={(e) => rememberRow(rowKey, e)}
+                  style={[
+                    styles.legendRow,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: active ? catColor : 'transparent',
+                      opacity: dimmed ? 0.5 : 1,
+                    },
+                  ]}
+                >
                   <Pressable
                     style={styles.legendHead}
-                    disabled={!item.categoryId}
-                    onPress={() => {
-                      setExpandedId(expanded ? null : item.categoryId);
-                      setExpandedSubKey(null);
-                    }}
+                    onPress={() => selectSlice(active ? null : rowKey)}
                   >
                     <CategoryIcon
                       icon={item.category?.icon ?? 'tag'}
@@ -286,7 +347,19 @@ const styles = StyleSheet.create({
   centerName: { fontSize: 15, fontWeight: '700', textAlign: 'center' },
   centerHint: { fontSize: 12, fontWeight: '500', marginTop: 4 },
   legend: { gap: 10 },
-  legendRow: { borderRadius: 16, overflow: 'hidden' },
+  // Borda sempre presente (transparente quando inativa) pra selecionar não mexer no layout.
+  legendRow: { borderRadius: 16, overflow: 'hidden', borderWidth: 2 },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    marginTop: -6,
+  },
+  clearText: { fontSize: 13, fontWeight: '700' },
   legendHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
   subList: {
     borderTopWidth: 1,

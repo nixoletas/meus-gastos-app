@@ -63,8 +63,10 @@ export function PieChart({
 }: Props) {
   const cx = size / 2;
   const cy = size / 2;
-  const rOuter = size / 2;
-  const rInner = size / 2 - thickness;
+  /** Quanto a fatia selecionada avança pra fora. O raio já desconta, senão vaza do SVG. */
+  const grow = 8;
+  const rOuter = size / 2 - grow;
+  const rInner = rOuter - thickness;
   const total = data.reduce((s, d) => s + d.value, 0);
   const startAngle = -Math.PI / 2; // começa no topo
 
@@ -92,7 +94,7 @@ export function PieChart({
     const dy = y - cy;
     const r = Math.sqrt(dx * dx + dy * dy);
     // Toque no buraco do donut ou fora: limpa a seleção.
-    if (r < rInner - 4 || r > rOuter + 6) {
+    if (r < rInner - 4 || r > rOuter + grow + 4) {
       onSelectSlice(null);
       return;
     }
@@ -122,20 +124,24 @@ export function PieChart({
           <Circle
             cx={cx}
             cy={cy}
-            r={(rOuter + rInner) / 2}
+            // Cresce só pra fora: o centro do traço acompanha metade do ganho.
+            r={(rOuter + rInner) / 2 + (selectedKey === positive[0].key ? grow / 2 : 0)}
             stroke={positive[0].color}
-            strokeWidth={thickness}
+            strokeWidth={selectedKey === positive[0].key ? thickness + grow : thickness}
             fill="none"
           />
         ) : (
-          segments.map((s) => (
-            <Path
-              key={s.key}
-              d={annularSector(cx, cy, rOuter, rInner, s.a0, s.a1)}
-              fill={s.color}
-              opacity={selectedKey != null && selectedKey !== s.key ? 0.3 : 1}
-            />
-          ))
+          segments.map((s) => {
+            const active = selectedKey === s.key;
+            return (
+              <Path
+                key={s.key}
+                d={annularSector(cx, cy, active ? rOuter + grow : rOuter, rInner, s.a0, s.a1)}
+                fill={s.color}
+                opacity={selectedKey != null && !active ? 0.3 : 1}
+              />
+            );
+          })
         )}
       </Svg>
       {children && (

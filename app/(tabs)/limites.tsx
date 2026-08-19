@@ -1,11 +1,11 @@
 import {
   MaterialCommunityIcons } from '@expo/vector-icons';
+import { useScrollToTop } from 'expo-router';
 import React,
   { useMemo,
   useRef,
   useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +17,7 @@ import { Text, TextInput } from '../../src/theme/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../src/components/AppIcon';
 import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
+import { ConfirmDialog } from '../../src/components/ConfirmDialog';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useData } from '../../src/context/DataContext';
 import { useTheme } from '../../src/theme/ThemeContext';
@@ -31,11 +32,17 @@ export default function LimitesScreen() {
     useData();
 
   const scrollRef = useRef<ScrollView>(null);
+  // Tocar na aba já ativa volta ao topo em vez de não fazer nada.
+  useScrollToTop(scrollRef);
 
   // Formulário de novo limite.
   const [period, setPeriod] = useState<Period>('month');
   const [categoryId, setCategoryId] = useState<string | null>(null); // null = geral
   const [raw, setRaw] = useState('');
+
+  // Limite aguardando confirmação de remoção (guarda o nome pra mostrar no diálogo).
+  const [removing, setRemoving] = useState<{ id: string; label: string } | null>(null);
+  const [removingBusy, setRemovingBusy] = useState(false);
 
   const alerts = useMemo(
     () => evaluateBudgets(budgets, expenses, categories, new Date()),
@@ -54,11 +61,12 @@ export default function LimitesScreen() {
     setCategoryId(null);
   }
 
-  function confirmRemove(id: string) {
-    Alert.alert('Remover limite', 'Remover este limite?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: () => deleteBudget(id) },
-    ]);
+  async function handleRemove() {
+    if (!removing) return;
+    setRemovingBusy(true);
+    await deleteBudget(removing.id);
+    setRemovingBusy(false);
+    setRemoving(null);
   }
 
   return (
@@ -108,7 +116,15 @@ export default function LimitesScreen() {
                       {formatBRL(a.spent)} de {formatBRL(a.budget.limit_amount)}
                     </Text>
                   </View>
-                  <Pressable onPress={() => confirmRemove(a.budget.id)} hitSlop={10}>
+                  <Pressable
+                    onPress={() =>
+                      setRemoving({
+                        id: a.budget.id,
+                        label: a.category?.name ?? 'Limite geral',
+                      })
+                    }
+                    hitSlop={10}
+                  >
                     <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.textMuted} />
                   </Pressable>
                 </View>
@@ -229,6 +245,17 @@ export default function LimitesScreen() {
         </PressableScale>
       </View>
     </ScrollView>
+
+    <ConfirmDialog
+      visible={removing !== null}
+      title={`Remover o limite de “${removing?.label ?? ''}”?`}
+      message="Os gastos continuam registrados; o app só para de avisar quando esse teto for alcançado."
+      confirmLabel="Remover"
+      icon="bell-off-outline"
+      busy={removingBusy}
+      onConfirm={handleRemove}
+      onCancel={() => setRemoving(null)}
+    />
     </KeyboardAvoidingView>
   );
 }

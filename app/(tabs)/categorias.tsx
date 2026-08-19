@@ -1,8 +1,9 @@
 import {
   MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useScrollToTop } from 'expo-router';
 import React,
   { useMemo,
+  useRef,
   useState } from 'react';
 import {
   FlatList,
@@ -26,6 +27,10 @@ export default function CategoriasScreen() {
   const insets = useSafeAreaInsets();
   const { categoriesWithSubs } = useData();
   const [query, setQuery] = useState('');
+
+  // Tocar na aba já ativa volta ao topo em vez de não fazer nada.
+  const listRef = useRef<FlatList<CategoryWithSubs>>(null);
+  useScrollToTop(listRef);
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
@@ -118,6 +123,7 @@ export default function CategoriasScreen() {
       </View>
 
       <FlatList
+        ref={listRef}
         data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
