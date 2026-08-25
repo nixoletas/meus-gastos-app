@@ -30,6 +30,10 @@ Expo + React Native Web.
 - 🚨 **Alertas de gasto excessivo**: aba **Meus Limites** para definir tetos
   (gerais ou por categoria) — o app avisa ao chegar a 80% e ao ultrapassar.
 - 🌗 **Tema claro e escuro** (ou automático, seguindo o sistema).
+- 🧾 **Notinha com leitura automática**: fotografe o cupom do mercado e o app
+  separa **cada item da compra** (descrição, quantidade, valor), guarda a foto
+  anexada ao lançamento e ainda lê mercado, data e forma de pagamento. Os itens
+  detalham o gasto — o total do mês continua sendo só o valor do lançamento.
 - 🗑️ **Excluir conta** a qualquer momento (apaga todos os dados).
 
 ---
@@ -88,6 +92,28 @@ O app entra **sem senha** — só com Google ou um **código de 6 dígitos** env
    - `meusgastos://` (app mobile)
    - a URL do seu site web (ex.: `http://localhost:8081` em dev e a de produção)
 
+### 3.2. Notinha (leitura da nota fiscal)
+
+A foto vai para um bucket privado e é lida pela Edge Function
+[`parse-receipt`](./supabase/functions/parse-receipt/README.md). O
+`schema.sql` já cria o bucket `receipts` e as políticas de acesso — só falta a
+chave do modelo:
+
+```bash
+cd meus-gastos-app          # o CLI procura supabase/functions/ a partir daqui
+supabase functions deploy parse-receipt
+supabase secrets set GEMINI_API_KEY=...
+```
+
+A leitura usa o **Gemini** (free tier do Google AI Studio) por padrão. Para
+usar o Claude, `RECEIPT_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` — o resto
+do código é o mesmo.
+
+Sem a chave, o resto do app funciona normalmente: só o botão de anexar avisa
+que a leitura não está configurada. `RECEIPTS_DAILY_LIMIT` (padrão 40) limita
+notinhas por usuário por dia, para um usuário sozinho não consumir a cota do
+projeto inteiro.
+
 ### 4. Rode o app
 
 **Web** (abre no navegador):
@@ -120,6 +146,7 @@ app/                       # Rotas (expo-router)
   otp.tsx                  # Código de 6 dígitos enviado por e-mail
   config.tsx               # Tela de "falta configurar o Supabase"
   novo.tsx                 # Lançar / editar gasto (com a comemoração)
+  notinha.tsx              # Foto da nota em tela cheia
   categoria.tsx            # Criar / editar categoria ou subcategoria
   (tabs)/
     index.tsx              # Home: total do período, limites de gasto, lista
@@ -133,11 +160,14 @@ src/
   context/                 # AuthContext e DataContext (estado global)
   data/                    # Catálogo de ícones e categorias padrão
   lib/supabase.ts          # Cliente Supabase
+  lib/receipts.ts          # Notinha: foto, upload e leitura (OCR)
+  lib/useReceipt.ts        # Estado da notinha dentro do lançamento
   theme/                   # Cores e ThemeContext (claro/escuro)
   utils/                   # Moeda (R$), datas, análises, haptics
   types.ts                 # Tipos do domínio
 
 supabase/schema.sql        # Schema do banco (rodar no Supabase)
+supabase/functions/        # Edge Functions (relatório por e-mail, notinha)
 ```
 
 ---

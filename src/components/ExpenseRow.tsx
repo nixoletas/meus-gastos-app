@@ -28,6 +28,13 @@ export function ExpenseRow({ expense, category, subcategory, onPress }: Props) {
 
   const title = subcategory?.name ?? category?.name ?? 'Gasto';
   const note = expense.note?.trim();
+  // Gasto com notinha mostra o que tem dentro sem precisar abrir.
+  const detail =
+    expense.items_count > 0
+      ? `${expense.items_count} ${expense.items_count === 1 ? 'item' : 'itens'}`
+      : expense.has_receipt
+        ? 'notinha'
+        : null;
   // Mostra a nota; se não houver, a categoria-mãe (quando for subcategoria).
   const secondary = note || (subcategory ? category?.name : undefined);
 
@@ -41,10 +48,24 @@ export function ExpenseRow({ expense, category, subcategory, onPress }: Props) {
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {title}
         </Text>
-        {!!secondary && (
-          <Text style={[styles.meta, { color: colors.textMuted }]} numberOfLines={1}>
-            {secondary}
-          </Text>
+        {(!!secondary || !!detail) && (
+          <View style={styles.metaRow}>
+            {!!secondary && (
+              <Text style={[styles.meta, styles.metaText, { color: colors.textMuted }]} numberOfLines={1}>
+                {secondary}
+              </Text>
+            )}
+            {!!detail && (
+              <View style={[styles.badge, { backgroundColor: colors.surface }]}>
+                <MaterialCommunityIcons
+                  name="receipt-text-outline"
+                  size={11}
+                  color={colors.textMuted}
+                />
+                <Text style={[styles.badgeText, { color: colors.textMuted }]}>{detail}</Text>
+              </View>
+            )}
+          </View>
         )}
       </View>
       <Text style={[styles.amount, { color: colors.text }]}>
@@ -69,7 +90,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 16,
   },
-  middle: { flex: 1, gap: 2 },
+  middle: { flex: 1, gap: 3 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaText: { flexShrink: 1 },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  badgeText: { fontSize: 11, fontWeight: '600' },
   title: { fontSize: 16, fontWeight: '600' },
   meta: { fontSize: 13 },
   amount: { fontSize: 16, fontWeight: '700' },

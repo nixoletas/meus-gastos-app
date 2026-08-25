@@ -112,6 +112,15 @@ function AuthGate() {
             contentStyle: { backgroundColor: colors.background },
           }}
         />
+        {/* Foto da notinha em tela cheia: fundo escuro fixo, a imagem manda. */}
+        <Stack.Screen
+          name="notinha"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+            contentStyle: { backgroundColor: '#0B1120' },
+          }}
+        />
       </Stack>
     </NavThemeProvider>
   );

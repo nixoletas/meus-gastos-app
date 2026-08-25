@@ -29,9 +29,13 @@ import { CalendarModal } from '../src/components/CalendarModal';
 import { hexWithAlpha } from '../src/components/CategoryIcon';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { PressableScale } from '../src/components/PressableScale';
+import { ReceiptSection } from '../src/components/ReceiptSection';
 import { SuccessFlash } from '../src/components/SuccessFlash';
 import { SuccessOverlay } from '../src/components/SuccessOverlay';
+import { useAuth } from '../src/context/AuthContext';
 import { useData } from '../src/context/DataContext';
+import { ParseResult } from '../src/lib/receipts';
+import { useReceipt } from '../src/lib/useReceipt';
 import { useTheme } from '../src/theme/ThemeContext';
 import { formatBRL, maskCurrencyInput, rawToReais, reaisToRaw } from '../src/utils/currency';
 import { fromISODate, relativeDayLabel, toISODate } from '../src/utils/date';
@@ -55,10 +59,12 @@ export default function NovoGastoScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
+  const { session } = useAuth();
   const {
     categoriesWithSubs,
     expenses,
     addExpense,
+    saveExpenseWithItems,
     updateExpense,
     deleteExpense,
   } = useData();
@@ -75,6 +81,8 @@ export default function NovoGastoScreen() {
     const remembered = readRememberedDate();
     return remembered ? fromISODate(remembered) : new Date();
   });
+  /** Data escolhida à mão não pode ser trocada pela data lida da notinha. */
+  const [dateTouched, setDateTouched] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -84,6 +92,22 @@ export default function NovoGastoScreen() {
   const [flash, setFlash] = useState<{ id: number; label: string } | null>(null);
   const amountRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Notinha: foto, leitura por OCR e as subcompras que saem dela.
+  const receiptState = useReceipt({
+    userId: session?.user.id ?? null,
+    expenseId: editing?.id ?? null,
+    onParsed: (result: ParseResult) => {
+      // Só preenche o que está vazio: o que a pessoa digitou vale mais que o OCR.
+      const total = Number(result.receipt.total ?? result.itemsTotal) || 0;
+      if (total > 0) setRaw((current) => (current ? current : reaisToRaw(total)));
+
+      const issued = result.receipt.issued_at ? new Date(result.receipt.issued_at) : null;
+      if (!dateTouched && issued && !Number.isNaN(issued.getTime()) && issued <= new Date()) {
+        setDate(issued);
+      }
+    },
+  });
 
   // Pequena animação de "pulo" no valor a cada dígito digitado.
   const amountScale = useSharedValue(1);
@@ -159,17 +183,43 @@ export default function NovoGastoScreen() {
       occurred_at: iso,
     };
 
+    // Com notinha ou subcompras o gasto vai por RPC: gasto, itens e foto
+    // entram numa transação só. `items_count` cobre o caso de o usuário ter
+    // apagado todos os itens de um gasto que já tinha.
+    const usesItems =
+      receiptState.items.length > 0 ||
+      receiptState.receipt !== null ||
+      (editing?.items_count ?? 0) > 0;
+
     if (editing) {
-      await updateExpense(editing.id, payload);
+      if (usesItems) {
+        await saveExpenseWithItems({
+          expense: payload,
+          items: receiptState.items,
+          receiptId: receiptState.receipt?.id ?? null,
+          expenseId: editing.id,
+        });
+        receiptState.markSaved();
+      } else {
+        await updateExpense(editing.id, payload);
+      }
       router.back();
       return;
     }
 
-    const created = await addExpense(payload);
+    const created = usesItems
+      ? await saveExpenseWithItems({
+          expense: payload,
+          items: receiptState.items,
+          receiptId: receiptState.receipt?.id ?? null,
+        })
+      : await addExpense(payload);
+
     if (!created) {
       setSaving(false);
       return;
     }
+    receiptState.markSaved();
     lastUsed = { date: iso, on: toISODate(new Date()) };
 
     if (keepOpen) {
@@ -177,6 +227,7 @@ export default function NovoGastoScreen() {
       setFlash({ id: Date.now(), label: `${formatBRL(amount)} lançado` });
       setRaw('');
       setNote('');
+      receiptState.reset();
       setSaving(false);
       amountRef.current?.focus();
       return;
@@ -368,6 +419,7 @@ export default function NovoGastoScreen() {
                   key={q.label}
                   onPress={() => {
                     setDate(q.value);
+                    setDateTouched(true);
                   }}
                   style={[
                     styles.dateChip,
@@ -414,6 +466,31 @@ export default function NovoGastoScreen() {
               styles.noteInput,
               { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
             ]}
+          />
+
+          {/* Notinha + subcompras. Os itens detalham o gasto; o total do mês
+              continua sendo só o valor do lançamento. */}
+          <ReceiptSection
+            receipt={receiptState.receipt}
+            items={receiptState.items}
+            phase={receiptState.phase}
+            error={receiptState.error}
+            mismatch={receiptState.mismatch}
+            photoUrl={receiptState.photoUrl}
+            expenseAmount={amount}
+            onAttach={receiptState.attach}
+            onRetry={receiptState.retry}
+            onRemove={receiptState.remove}
+            onChangeItems={receiptState.setItems}
+            onUseItemsTotal={(value) => setRaw(reaisToRaw(value))}
+            onOpenPhoto={() => {
+              if (receiptState.receipt) {
+                router.push({
+                  pathname: '/notinha',
+                  params: { id: receiptState.receipt.id },
+                });
+              }
+            }}
           />
         </ScrollView>
 
@@ -481,7 +558,10 @@ export default function NovoGastoScreen() {
       <CalendarModal
         visible={calendarOpen}
         selected={date}
-        onSelect={setDate}
+        onSelect={(picked) => {
+          setDate(picked);
+          setDateTouched(true);
+        }}
         onClose={() => setCalendarOpen(false)}
       />
 

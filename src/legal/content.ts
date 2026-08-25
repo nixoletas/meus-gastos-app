@@ -11,7 +11,7 @@ export const CONTACT_EMAIL = 'contato@meusgastos.dev.br';
 /** Formulário para reclamações, pedidos de feature e dúvidas. */
 export const FEEDBACK_FORM_URL = 'https://forms.gle/od4DdV7uanvcwxTh8';
 export const CONTROLLER = 'a equipe do Meus Gastos';
-export const LAST_UPDATED = '20 de junho de 2026';
+export const LAST_UPDATED = '24 de agosto de 2026';
 
 export type LegalSection = { title: string; body: string[] };
 
@@ -27,8 +27,9 @@ export const PRIVACY: LegalSection[] = [
     body: [
       'Dados de conta: ao entrar com o Google, recebemos seu e-mail, nome e foto de perfil.',
       'Dados que você cria no app: seus gastos (valor, data, nota), categorias, subcategorias e limites de gasto.',
+      'Fotos de notas fiscais que você escolher anexar a um gasto, e os itens lidos delas (descrição, quantidade e valor de cada produto), junto de dados impressos na nota como estabelecimento, CNPJ, data e forma de pagamento.',
       'Dados técnicos básicos necessários para o funcionamento (ex.: identificador da sessão).',
-      'Não coletamos dados bancários, número de cartão, CPF ou localização.',
+      'Não pedimos dados bancários, número de cartão, CPF ou localização. Atenção: a foto de uma nota fiscal pode conter o CNPJ do estabelecimento e, se você pediu CPF na nota, o seu CPF — esses dados ficam dentro da imagem que você anexou.',
     ],
   },
   {
@@ -37,6 +38,7 @@ export const PRIVACY: LegalSection[] = [
       'Para autenticar seu acesso (login com Google) e manter sua sessão.',
       'Para armazenar e sincronizar seus lançamentos entre seus dispositivos.',
       'Para gerar os gráficos, resumos e alertas de limite dentro do app.',
+      'Para ler os itens da nota fiscal que você fotografa e transformá-los nas subcompras do lançamento — só quando você usa esse recurso.',
     ],
   },
   {
@@ -49,7 +51,7 @@ export const PRIVACY: LegalSection[] = [
     title: 'Com quem compartilhamos',
     body: [
       'Supabase: provedor de autenticação e banco de dados onde seus dados ficam armazenados.',
-      'Google: usado para autenticar seu acesso (login com a conta Google).',
+      'Google: usado para autenticar seu acesso (login com a conta Google) e, através da API Gemini, para ler a foto da nota fiscal que você anexa. A imagem só é enviada quando você usa o recurso de notinha. Hoje usamos o nível gratuito dessa API, e nele o Google pode usar o conteúdo enviado para melhorar os produtos dele, inclusive com revisão humana. Por isso: não anexe uma nota que você não queira que saia do app.',
       'Não vendemos seus dados nem os usamos para publicidade.',
     ],
   },
@@ -72,6 +74,7 @@ export const PRIVACY: LegalSection[] = [
     title: 'Retenção',
     body: [
       'Mantemos seus dados enquanto sua conta existir. Ao excluir a conta, os dados são removidos de imediato.',
+      'A foto de uma notinha é apagada junto com o gasto ao qual ela pertence, e todas as fotos são apagadas quando você exclui a conta.',
     ],
   },
   {

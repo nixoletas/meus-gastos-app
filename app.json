@@ -33,7 +33,14 @@
       "expo-font",
       "expo-web-browser",
       "@react-native-google-signin/google-signin",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "O Meus Gastos usa a câmera para fotografar a notinha e separar os itens da compra.",
+          "photosPermission": "O Meus Gastos acessa suas fotos para você anexar a notinha ao gasto."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
