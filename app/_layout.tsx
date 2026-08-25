@@ -112,6 +112,15 @@ function AuthGate() {
             contentStyle: { backgroundColor: colors.background },
           }}
         />
+        {/* Leitor do QR do cupom: câmera em tela cheia. */}
+        <Stack.Screen
+          name="qrcode"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+            contentStyle: { backgroundColor: '#0B1120' },
+          }}
+        />
         {/* Foto da notinha em tela cheia: fundo escuro fixo, a imagem manda. */}
         <Stack.Screen
           name="notinha"

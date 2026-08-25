@@ -537,3 +537,47 @@ $fn$;
 
 revoke all on function public.delete_account() from public, anon;
 grant execute on function public.delete_account() to authenticated;
+
+-- ============================================================================
+--  NFC-e por QR Code — a notinha passa a ter duas origens.
+--
+--  Lendo o QR do cupom, os itens vêm do próprio portal da SEFAZ: exatos, de
+--  graça e sem mandar imagem para ninguém. Nem toda nota tem QR (feira,
+--  padaria, recibo), então a foto continua sendo o outro caminho — e uma
+--  notinha de QR pode ganhar foto depois, e vice-versa.
+-- ============================================================================
+alter table public.receipts
+  alter column storage_path drop not null;
+
+alter table public.receipts
+  add column if not exists source text not null default 'photo',
+  add column if not exists qr_url text;
+
+do $chk$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'receipts_source_check'
+  ) then
+    alter table public.receipts
+      add constraint receipts_source_check check (source in ('photo', 'qrcode'));
+  end if;
+end $chk$;
+
+-- Uma notinha precisa de foto OU de QR — linha sem nenhum dos dois é lixo.
+do $chk$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'receipts_origin_check'
+  ) then
+    alter table public.receipts
+      add constraint receipts_origin_check
+      check (storage_path is not null or qr_url is not null);
+  end if;
+end $chk$;
+
+-- Achar rápido se a mesma nota já foi lançada (a chave de acesso é única
+-- por nota no Brasil inteiro). Não é índice único: quem lançar duas vezes
+-- recebe um aviso na tela, não um erro do banco.
+create index if not exists receipts_access_key_idx
+  on public.receipts (user_id, access_key)
+  where access_key is not null;

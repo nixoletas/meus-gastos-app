@@ -30,10 +30,18 @@ Expo + React Native Web.
 - 🚨 **Alertas de gasto excessivo**: aba **Meus Limites** para definir tetos
   (gerais ou por categoria) — o app avisa ao chegar a 80% e ao ultrapassar.
 - 🌗 **Tema claro e escuro** (ou automático, seguindo o sistema).
-- 🧾 **Notinha com leitura automática**: fotografe o cupom do mercado e o app
-  separa **cada item da compra** (descrição, quantidade, valor), guarda a foto
-  anexada ao lançamento e ainda lê mercado, data e forma de pagamento. Os itens
-  detalham o gasto — o total do mês continua sendo só o valor do lançamento.
+- 🧾 **Notinha com leitura automática**, por dois caminhos:
+  - **QR Code do cupom** (preferido): os itens vêm direto do portal da SEFAZ —
+    exatos, de graça e sem enviar imagem para lugar nenhum.
+  - **Foto da nota**: para o que não tem QR (feira, padaria, recibo). Um modelo
+    lê a imagem e separa os itens.
+  Nos dois casos o app guarda **cada item da compra** (descrição, quantidade,
+  valor), mais mercado, CNPJ, data e forma de pagamento. Os itens detalham o
+  gasto — o total do mês continua sendo só o valor do lançamento.
+- 📈 **Itens no gráfico**: na tela de gráficos a árvore vai até o fim —
+  categoria › subcategoria › lançamento › **itens daquela compra**.
+- 📗 **Relatório com os itens**: a planilha exportada ganha a aba *Itens* e um
+  *Top produtos* no resumo.
 - 🗑️ **Excluir conta** a qualquer momento (apaga todos os dados).
 
 ---
@@ -101,9 +109,14 @@ chave do modelo:
 
 ```bash
 cd meus-gastos-app          # o CLI procura supabase/functions/ a partir daqui
-supabase functions deploy parse-receipt
+supabase functions deploy parse-nfce      # QR Code — não precisa de chave
+supabase functions deploy parse-receipt   # foto
 supabase secrets set GEMINI_API_KEY=...
 ```
+
+A leitura por **QR Code** ([`parse-nfce`](./supabase/functions/parse-nfce/README.md))
+é pública: consulta o portal da SEFAZ do próprio estado e não usa modelo nenhum.
+Só a leitura por **foto** precisa de chave.
 
 A leitura usa o **Gemini** (free tier do Google AI Studio) por padrão. Para
 usar o Claude, `RECEIPT_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` — o resto
@@ -147,6 +160,7 @@ app/                       # Rotas (expo-router)
   config.tsx               # Tela de "falta configurar o Supabase"
   novo.tsx                 # Lançar / editar gasto (com a comemoração)
   notinha.tsx              # Foto da nota em tela cheia
+  qrcode.tsx               # Leitor do QR Code do cupom
   categoria.tsx            # Criar / editar categoria ou subcategoria
   (tabs)/
     index.tsx              # Home: total do período, limites de gasto, lista
@@ -160,8 +174,9 @@ src/
   context/                 # AuthContext e DataContext (estado global)
   data/                    # Catálogo de ícones e categorias padrão
   lib/supabase.ts          # Cliente Supabase
-  lib/receipts.ts          # Notinha: foto, upload e leitura (OCR)
+  lib/receipts.ts          # Notinha: foto, QR, upload e leitura
   lib/useReceipt.ts        # Estado da notinha dentro do lançamento
+  lib/periodItems.ts       # Itens do período (gráfico por item)
   theme/                   # Cores e ThemeContext (claro/escuro)
   utils/                   # Moeda (R$), datas, análises, haptics
   types.ts                 # Tipos do domínio

@@ -27,6 +27,8 @@ export type ParseResult = {
   itemsTotal: number;
   /** A soma dos itens não fecha com o total impresso na nota. */
   mismatch: boolean;
+  /** Id do gasto que já usou esta mesma nota fiscal (chave de acesso repetida). */
+  duplicate?: string | null;
 };
 
 const B64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -113,6 +115,26 @@ export async function pickReceiptPhoto(
   return { base64: processed.base64, uri: processed.uri };
 }
 
+/**
+ * QR lido na tela da câmera, esperando a tela de lançamento buscar.
+ *
+ * A tela do scanner não conhece o lançamento — ela só lê e volta. Um valor
+ * de módulo resolve isso sem inventar contexto novo para um dado que vive
+ * por dois segundos.
+ */
+let pendingScan: string | null = null;
+
+export function setPendingScan(url: string) {
+  pendingScan = url;
+}
+
+/** Devolve o QR lido (e esquece), ou null se não houve leitura. */
+export function takePendingScan(): string | null {
+  const value = pendingScan;
+  pendingScan = null;
+  return value;
+}
+
 /** Sobe a foto e cria a linha da notinha (ainda sem itens). */
 export async function uploadReceipt(
   userId: string,
@@ -147,9 +169,37 @@ export async function uploadReceipt(
   return data as Receipt;
 }
 
+/** Cria a notinha a partir do QR Code, sem foto nenhuma. */
+export async function createQrReceipt(userId: string, qrUrl: string): Promise<Receipt> {
+  const { data, error } = await supabase
+    .from('receipts')
+    .insert({
+      user_id: userId,
+      expense_id: null,
+      source: 'qrcode',
+      qr_url: qrUrl,
+      storage_path: null,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? 'Não consegui registrar a notinha.');
+  return data as Receipt;
+}
+
+/** Consulta a NFC-e no portal da SEFAZ a partir do QR já salvo. */
+export function parseNfce(receiptId: string): Promise<ParseResult> {
+  return invokeParser('parse-nfce', receiptId);
+}
+
 /** Chama o OCR. Pode demorar alguns segundos — a tela mostra o esqueleto. */
-export async function parseReceipt(receiptId: string): Promise<ParseResult> {
-  const { data, error } = await supabase.functions.invoke<ParseResult>('parse-receipt', {
+export function parseReceipt(receiptId: string): Promise<ParseResult> {
+  return invokeParser('parse-receipt', receiptId);
+}
+
+async function invokeParser(fn: 'parse-receipt' | 'parse-nfce', receiptId: string): Promise<ParseResult> {
+  const { data, error } = await supabase.functions.invoke<ParseResult>(fn, {
     body: { receipt_id: receiptId },
   });
 
@@ -175,7 +225,10 @@ export async function parseReceipt(receiptId: string): Promise<ParseResult> {
 /** Apaga a notinha, os itens de rascunho dela e o arquivo no Storage. */
 export async function discardReceipt(receipt: Receipt): Promise<void> {
   await supabase.rpc('discard_receipt', { p_receipt_id: receipt.id });
-  await supabase.storage.from('receipts').remove([receipt.storage_path]);
+  // Notinha de QR Code não tem arquivo para apagar.
+  if (receipt.storage_path) {
+    await supabase.storage.from('receipts').remove([receipt.storage_path]);
+  }
 }
 
 /** URL temporária para exibir a foto (o bucket é privado). */

@@ -40,6 +40,12 @@
           "cameraPermission": "O Meus Gastos usa a câmera para fotografar a notinha e separar os itens da compra.",
           "photosPermission": "O Meus Gastos acessa suas fotos para você anexar a notinha ao gasto."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O Meus Gastos usa a câmera para ler o QR Code do cupom fiscal."
+        }
       ]
     ],
     "experiments": {

@@ -21,7 +21,7 @@ import {
   ReaderError,
   readReceipt,
 } from './reader.ts';
-import { checkSum, normalizeParsed } from './schema.ts';
+import { checkSum, normalizeParsed } from '../_shared/receipt.ts';
 
 /** Teto diário de notinhas por usuário: protege a cota (e a fatura, se houver). */
 const DAILY_LIMIT = Number(Deno.env.get('RECEIPTS_DAILY_LIMIT') ?? '40');

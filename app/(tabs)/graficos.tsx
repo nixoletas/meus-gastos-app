@@ -15,6 +15,7 @@ import { Text } from '../../src/theme/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../src/components/AppIcon';
 import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
+import { ExpenseItems } from '../../src/components/ExpenseItems';
 import { PeriodSwitcher } from '../../src/components/PeriodSwitcher';
 import { PieChart, PieSlice } from '../../src/components/PieChart';
 import { useData } from '../../src/context/DataContext';
@@ -38,6 +39,8 @@ export default function GraficosScreen() {
   const [period, setPeriod] = useState<Period>('month');
   const [refDate, setRefDate] = useState(new Date());
   const [expandedSubKey, setExpandedSubKey] = useState<string | null>(null);
+  /** Gasto aberto mostrando as subcompras da notinha. */
+  const [expandedExpenseId, setExpandedExpenseId] = useState<string | null>(null);
   /** Categoria em foco — a mesma pela fatia do donut e pela linha da legenda. */
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
@@ -51,6 +54,7 @@ export default function GraficosScreen() {
   function selectSlice(key: string | null) {
     setSelectedKey(key);
     setExpandedSubKey(null);
+    setExpandedExpenseId(null);
   }
 
   // Escolher pela pizza precisa trazer a linha da legenda pra vista. Espera um
@@ -289,29 +293,60 @@ export default function GraficosScreen() {
 
                             {subOpen && (
                               <View style={styles.expenseList}>
-                                {items.map((e) => (
-                                  <Pressable
-                                    key={e.id}
-                                    style={styles.expenseRow}
-                                    onPress={() =>
-                                      router.push({ pathname: '/novo', params: { id: e.id } })
-                                    }
-                                  >
-                                    <View style={[styles.expenseDot, { backgroundColor: catColor }]} />
-                                    <Text
-                                      style={[styles.expenseName, { color: colors.text }]}
-                                      numberOfLines={1}
-                                    >
-                                      {e.note?.trim() || (s.sub?.name ?? 'Sem subcategoria')}
-                                    </Text>
-                                    <Text style={[styles.expenseDate, { color: colors.textMuted }]}>
-                                      {relativeDayLabel(e.occurred_at)}
-                                    </Text>
-                                    <Text style={[styles.expenseValue, { color: colors.text }]}>
-                                      {formatBRL(e.amount)}
-                                    </Text>
-                                  </Pressable>
-                                ))}
+                                {items.map((e) => {
+                                  const itensAbertos = expandedExpenseId === e.id;
+                                  return (
+                                    <View key={e.id}>
+                                      <Pressable
+                                        style={styles.expenseRow}
+                                        onPress={() =>
+                                          router.push({ pathname: '/novo', params: { id: e.id } })
+                                        }
+                                      >
+                                        <View style={[styles.expenseDot, { backgroundColor: catColor }]} />
+                                        <Text
+                                          style={[styles.expenseName, { color: colors.text }]}
+                                          numberOfLines={1}
+                                        >
+                                          {e.note?.trim() || (s.sub?.name ?? 'Sem subcategoria')}
+                                        </Text>
+                                        <Text style={[styles.expenseDate, { color: colors.textMuted }]}>
+                                          {relativeDayLabel(e.occurred_at)}
+                                        </Text>
+                                        <Text style={[styles.expenseValue, { color: colors.text }]}>
+                                          {formatBRL(e.amount)}
+                                        </Text>
+
+                                        {/* Alvo próprio: tocar na linha continua abrindo o
+                                            lançamento; a seta abre as subcompras aqui mesmo. */}
+                                        {e.items_count > 0 && (
+                                          <Pressable
+                                            hitSlop={10}
+                                            onPress={() =>
+                                              setExpandedExpenseId(itensAbertos ? null : e.id)
+                                            }
+                                            style={styles.itemsToggle}
+                                          >
+                                            <Text
+                                              style={[styles.itemsCount, { color: colors.textMuted }]}
+                                            >
+                                              {e.items_count}
+                                            </Text>
+                                            <MaterialCommunityIcons
+                                              name={itensAbertos ? 'chevron-up' : 'chevron-down'}
+                                              size={16}
+                                              color={colors.textMuted}
+                                            />
+                                          </Pressable>
+                                        )}
+                                      </Pressable>
+
+                                      {itensAbertos && (
+                                        <ExpenseItems expenseId={e.id} color={catColor} />
+                                      )}
+                                    </View>
+                                  );
+                                })}
                               </View>
                             )}
                           </View>
@@ -347,6 +382,8 @@ const styles = StyleSheet.create({
   centerName: { fontSize: 15, fontWeight: '700', textAlign: 'center' },
   centerHint: { fontSize: 12, fontWeight: '500', marginTop: 4 },
   legend: { gap: 10 },
+  itemsToggle: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingLeft: 4 },
+  itemsCount: { fontSize: 11, fontWeight: '700' },
   // Borda sempre presente (transparente quando inativa) pra selecionar não mexer no layout.
   legendRow: { borderRadius: 16, overflow: 'hidden', borderWidth: 2 },
   clearBtn: {

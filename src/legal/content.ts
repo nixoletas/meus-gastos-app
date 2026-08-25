@@ -51,6 +51,7 @@ export const PRIVACY: LegalSection[] = [
     title: 'Com quem compartilhamos',
     body: [
       'Supabase: provedor de autenticação e banco de dados onde seus dados ficam armazenados.',
+      'SEFAZ do seu estado: quando você lê o QR Code de um cupom fiscal, consultamos a página pública daquela nota para trazer os itens. Nesse caminho nenhuma imagem é enviada a terceiros.',
       'Google: usado para autenticar seu acesso (login com a conta Google) e, através da API Gemini, para ler a foto da nota fiscal que você anexa. A imagem só é enviada quando você usa o recurso de notinha. Hoje usamos o nível gratuito dessa API, e nele o Google pode usar o conteúdo enviado para melhorar os produtos dele, inclusive com revisão humana. Por isso: não anexe uma nota que você não queira que saia do app.',
       'Não vendemos seus dados nem os usamos para publicidade.',
     ],

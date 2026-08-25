@@ -1,6 +1,7 @@
 import {
   MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams,
+import { useFocusEffect,
+  useLocalSearchParams,
   useRouter } from 'expo-router';
 import React,
   { useEffect,
@@ -34,7 +35,7 @@ import { SuccessFlash } from '../src/components/SuccessFlash';
 import { SuccessOverlay } from '../src/components/SuccessOverlay';
 import { useAuth } from '../src/context/AuthContext';
 import { useData } from '../src/context/DataContext';
-import { ParseResult } from '../src/lib/receipts';
+import { ParseResult, takePendingScan } from '../src/lib/receipts';
 import { useReceipt } from '../src/lib/useReceipt';
 import { useTheme } from '../src/theme/ThemeContext';
 import { formatBRL, maskCurrencyInput, rawToReais, reaisToRaw } from '../src/utils/currency';
@@ -150,6 +151,14 @@ export default function NovoGastoScreen() {
       return () => clearTimeout(t);
     }
   }, [editing?.id]);
+
+  // Voltando do leitor de QR: a tela do scanner só deixa o valor lido para trás.
+  useFocusEffect(
+    React.useCallback(() => {
+      const scanned = takePendingScan();
+      if (scanned) void receiptState.attachQr(scanned);
+    }, [receiptState.attachQr])
+  );
 
   function handleAmountChange(text: string) {
     setRaw(text.replace(/\D/g, '').slice(0, 11));
@@ -478,7 +487,9 @@ export default function NovoGastoScreen() {
             mismatch={receiptState.mismatch}
             photoUrl={receiptState.photoUrl}
             expenseAmount={amount}
+            duplicate={receiptState.duplicate}
             onAttach={receiptState.attach}
+            onScanQr={() => router.push('/qrcode')}
             onRetry={receiptState.retry}
             onRemove={receiptState.remove}
             onChangeItems={receiptState.setItems}

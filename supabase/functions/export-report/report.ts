@@ -11,12 +11,43 @@ export type ReportExpense = {
   color: string; // hex da categoria, ex.: #0EA5A4
 };
 
+/** Uma subcompra da notinha, já com os dados do gasto-pai resolvidos. */
+export type ReportItem = {
+  occurred_at: string; // YYYY-MM-DD (data do lançamento)
+  description: string;
+  quantity: number;
+  unit: string | null;
+  unit_price: number | null;
+  total: number;
+  merchant: string;
+  category: string;
+};
+
 export type ReportInput = {
   periodLabel: string; // ex.: "Julho de 2026" ou "2026"
   periodKind: 'month' | 'year';
   userName: string;
   expenses: ReportExpense[];
+  /** Itens lidos das notinhas. Vazio quando ninguém anexou nota no período. */
+  items?: ReportItem[];
 };
+
+/**
+ * Ranking de produtos: junta pelo texto normalizado, porque "Leite integral" e
+ * "LEITE INTEGRAL" são a mesma compra para quem lê o relatório.
+ */
+function rankItems(items: ReportItem[]) {
+  const buckets = new Map<string, { name: string; total: number; count: number }>();
+  for (const item of items) {
+    const key = item.description.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!key) continue;
+    const bucket = buckets.get(key) ?? { name: item.description.trim(), total: 0, count: 0 };
+    bucket.total += item.total;
+    bucket.count += 1;
+    buckets.set(key, bucket);
+  }
+  return [...buckets.values()].sort((a, b) => b.total - a.total);
+}
 
 // Paleta da marca (mesma do app).
 const BRAND = 'FF0EA5A4';
@@ -52,6 +83,9 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
 
   const total = input.expenses.reduce((s, e) => s + e.amount, 0);
   const count = input.expenses.length;
+  const items = input.items ?? [];
+  const topItens = rankItems(items).slice(0, 10);
+  const itensTotal = items.reduce((s, i) => s + i.total, 0);
 
   // Agrupa por categoria.
   const byCat = new Map<string, { total: number; count: number; color: string }>();
@@ -220,6 +254,60 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   }
 
   // ────────────────────────────────────────────────────────────────
+  // Resumo — top produtos (só quando houve notinha no período)
+  // ────────────────────────────────────────────────────────────────
+  if (topItens.length > 0) {
+    const inicio = totalRow + 3;
+    resumo.mergeCells(`B${inicio}:E${inicio}`);
+    const tituloItens = resumo.getCell(`B${inicio}`);
+    tituloItens.value = 'Top produtos (pelas notinhas)';
+    tituloItens.font = { size: 14, bold: true, color: { argb: INK } };
+
+    const cabecalho = ['Produto', 'Total', 'Vezes', ''];
+    cabecalho.forEach((h, i) => {
+      const cell = resumo.getCell(inicio + 1, 2 + i);
+      cell.value = h;
+      cell.font = { bold: true, color: { argb: WHITE } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND } };
+      cell.alignment = { vertical: 'middle', horizontal: i === 0 ? 'left' : 'center', indent: i === 0 ? 1 : 0 };
+      cell.border = thinBorder(BRAND);
+    });
+
+    const maior = topItens[0].total;
+    topItens.forEach((item, i) => {
+      const r = inicio + 2 + i;
+      const zebra = i % 2 === 1;
+
+      const nome = resumo.getCell(r, 2);
+      nome.value = item.name;
+      nome.font = { color: { argb: INK }, bold: true };
+      nome.alignment = { horizontal: 'left', indent: 1 };
+
+      const valor = resumo.getCell(r, 3);
+      valor.value = item.total;
+      valor.numFmt = MONEY_FMT;
+      valor.alignment = { horizontal: 'right' };
+
+      const vezes = resumo.getCell(r, 4);
+      vezes.value = item.count;
+      vezes.alignment = { horizontal: 'center' };
+      vezes.font = { color: { argb: MUTED } };
+
+      // Mesma barra de blocos da tabela de categorias, para comparar de relance.
+      const barra = resumo.getCell(r, 5);
+      barra.value = '█'.repeat(Math.max(1, Math.round((item.total / maior) * 20)));
+      barra.font = { color: { argb: BRAND } };
+      barra.alignment = { horizontal: 'left' };
+
+      for (let col = 2; col <= 5; col++) {
+        const cell = resumo.getCell(r, col);
+        cell.border = { bottom: { style: 'hair', color: { argb: BORDER } } };
+        if (zebra) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } };
+      }
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────
   // Aba 2 — Lançamentos (detalhe)
   // ────────────────────────────────────────────────────────────────
   const det = wb.addWorksheet('Lançamentos', { views: [{ showGridLines: false, state: 'frozen', ySplit: 1 }] });
@@ -271,6 +359,80 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   det.getCell(footIdx, 5).font = { bold: true, color: { argb: WHITE } };
   det.getCell(footIdx, 5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_DARK } };
   det.getCell(footIdx, 5).alignment = { horizontal: 'right' };
+
+  // ────────────────────────────────────────────────────────────────
+  // Aba 3 — Itens (o que veio das notinhas)
+  //
+  // Só existe quando houve notinha no período: planilha vazia confunde mais
+  // do que ajuda. O total daqui é menor que o do relatório de propósito — nem
+  // todo gasto tem nota anexada.
+  // ────────────────────────────────────────────────────────────────
+  if (items.length > 0) {
+    const aba = wb.addWorksheet('Itens', {
+      views: [{ showGridLines: false, state: 'frozen', ySplit: 1 }],
+    });
+    aba.columns = [
+      { header: 'Data', key: 'data', width: 14 },
+      { header: 'Estabelecimento', key: 'mercado', width: 28 },
+      { header: 'Item', key: 'item', width: 38 },
+      { header: 'Qtd.', key: 'qtd', width: 10 },
+      { header: 'Un.', key: 'un', width: 8 },
+      { header: 'Vl. unit.', key: 'unit', width: 14 },
+      { header: 'Total', key: 'total', width: 14 },
+      { header: 'Categoria', key: 'cat', width: 22 },
+    ];
+
+    const cabecalho = aba.getRow(1);
+    cabecalho.height = 24;
+    cabecalho.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: WHITE } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND } };
+      cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+      cell.border = thinBorder(BRAND);
+    });
+
+    const ordenados = [...items].sort((a, b) =>
+      a.occurred_at === b.occurred_at ? 0 : a.occurred_at < b.occurred_at ? 1 : -1
+    );
+
+    ordenados.forEach((item, i) => {
+      const row = aba.addRow({
+        data: item.occurred_at ? formatDayBr(item.occurred_at) : '',
+        mercado: item.merchant,
+        item: item.description,
+        qtd: item.quantity,
+        un: item.unit ?? '',
+        unit: item.unit_price ?? '',
+        total: item.total,
+        cat: item.category,
+      });
+      row.getCell('unit').numFmt = MONEY_FMT;
+      row.getCell('total').numFmt = MONEY_FMT;
+      row.eachCell((cell, col) => {
+        const direita = col === 6 || col === 7;
+        cell.alignment = {
+          horizontal: direita ? 'right' : col === 4 || col === 5 ? 'center' : 'left',
+          indent: direita ? 0 : 1,
+          vertical: 'middle',
+        };
+        cell.font = { color: { argb: INK } };
+        cell.border = { bottom: { style: 'hair', color: { argb: BORDER } } };
+        if (i % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } };
+      });
+      row.height = 19;
+    });
+
+    const rodape = aba.rowCount + 1;
+    aba.getCell(rodape, 6).value = 'TOTAL EM ITENS';
+    aba.getCell(rodape, 7).value = itensTotal;
+    aba.getCell(rodape, 7).numFmt = MONEY_FMT;
+    for (const col of [6, 7]) {
+      const cell = aba.getCell(rodape, col);
+      cell.font = { bold: true, color: { argb: WHITE } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_DARK } };
+      cell.alignment = { horizontal: 'right', indent: col === 6 ? 1 : 0 };
+    }
+  }
 
   const buffer = await wb.xlsx.writeBuffer();
   return new Uint8Array(buffer as ArrayBuffer);

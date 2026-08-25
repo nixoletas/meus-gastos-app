@@ -25,10 +25,13 @@ type Props = {
   error: string | null;
   /** A soma dos itens não bate com o total impresso na nota. */
   mismatch: boolean;
+  /** Id do gasto que já usou esta mesma nota fiscal. */
+  duplicate: string | null;
   photoUrl: string | null;
   /** Valor digitado no lançamento, para comparar com a soma dos itens. */
   expenseAmount: number;
   onAttach: (source: ReceiptSource) => void;
+  onScanQr: () => void;
   onRetry: () => void;
   onRemove: () => void;
   onChangeItems: (items: DraftItem[]) => void;
@@ -89,9 +92,11 @@ export function ReceiptSection({
   phase,
   error,
   mismatch,
+  duplicate,
   photoUrl,
   expenseAmount,
   onAttach,
+  onScanQr,
   onRetry,
   onRemove,
   onChangeItems,
@@ -134,24 +139,37 @@ export function ReceiptSection({
         )}
       </View>
 
-      {/* Nenhuma foto ainda: os dois caminhos de anexar. */}
+      {/* Nada anexado ainda. O QR vem primeiro: os itens saem exatos do portal
+          da SEFAZ, sem foto e sem custo. A foto cobre o resto — feira, padaria,
+          recibo, cupom velho sem QR. */}
       {!receipt && !busy && (
-        <View style={styles.attachRow}>
+        <>
           <PressableScale
-            onPress={() => onAttach('camera')}
-            style={[styles.attachBtn, { backgroundColor: colors.primarySoft }]}
+            onPress={onScanQr}
+            style={[styles.qrBtn, { backgroundColor: colors.primary }]}
           >
-            <MaterialCommunityIcons name="camera-outline" size={20} color={colors.primary} />
-            <Text style={[styles.attachText, { color: colors.primary }]}>Fotografar nota</Text>
+            <MaterialCommunityIcons name="qrcode-scan" size={22} color={colors.onPrimary} />
+            <Text style={[styles.attachText, { color: colors.onPrimary }]}>
+              Ler QR do cupom
+            </Text>
           </PressableScale>
-          <PressableScale
-            onPress={() => onAttach('library')}
-            style={[styles.attachBtn, { backgroundColor: colors.surface }]}
-          >
-            <MaterialCommunityIcons name="image-outline" size={20} color={colors.text} />
-            <Text style={[styles.attachText, { color: colors.text }]}>Da galeria</Text>
-          </PressableScale>
-        </View>
+          <View style={styles.attachRow}>
+            <PressableScale
+              onPress={() => onAttach('camera')}
+              style={[styles.attachBtn, { backgroundColor: colors.primarySoft }]}
+            >
+              <MaterialCommunityIcons name="camera-outline" size={20} color={colors.primary} />
+              <Text style={[styles.attachText, { color: colors.primary }]}>Fotografar</Text>
+            </PressableScale>
+            <PressableScale
+              onPress={() => onAttach('library')}
+              style={[styles.attachBtn, { backgroundColor: colors.surface }]}
+            >
+              <MaterialCommunityIcons name="image-outline" size={20} color={colors.text} />
+              <Text style={[styles.attachText, { color: colors.text }]}>Da galeria</Text>
+            </PressableScale>
+          </View>
+        </>
       )}
 
       {/* Enviando / lendo. */}
@@ -160,7 +178,11 @@ export function ReceiptSection({
           <View style={styles.busyRow}>
             <ActivityIndicator color={colors.primary} />
             <Text style={[styles.busyText, { color: colors.text }]}>
-              {phase === 'uploading' ? 'Enviando a foto…' : 'Lendo sua notinha…'}
+              {phase === 'uploading'
+                ? 'Enviando a foto…'
+                : receipt?.source === 'qrcode'
+                  ? 'Consultando a nota na SEFAZ…'
+                  : 'Lendo sua notinha…'}
             </Text>
           </View>
           <View style={styles.skeletonGroup}>
@@ -200,7 +222,9 @@ export function ReceiptSection({
               style={[styles.smallBtn, { backgroundColor: colors.card }]}
             >
               <MaterialCommunityIcons name="camera-outline" size={16} color={colors.text} />
-              <Text style={[styles.smallBtnText, { color: colors.text }]}>Outra foto</Text>
+              <Text style={[styles.smallBtnText, { color: colors.text }]}>
+                {receipt?.source === 'qrcode' ? 'Fotografar a nota' : 'Outra foto'}
+              </Text>
             </Pressable>
             {!!receipt && (
               <Pressable onPress={onRemove} style={[styles.smallBtn, { backgroundColor: colors.card }]}>
@@ -216,16 +240,22 @@ export function ReceiptSection({
       {!!receipt && !busy && phase !== 'failed' && (
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.receiptRow}>
-            <Pressable onPress={onOpenPhoto} style={styles.thumbWrap}>
-              {photoUrl ? (
+            {photoUrl ? (
+              <Pressable onPress={onOpenPhoto} style={styles.thumbWrap}>
                 <Image source={{ uri: photoUrl }} style={styles.thumb} resizeMode="cover" />
-              ) : (
-                <View style={[styles.thumb, { backgroundColor: colors.surface }]} />
-              )}
-            </Pressable>
+              </Pressable>
+            ) : (
+              <View style={[styles.thumb, styles.thumbIcon, { backgroundColor: colors.surface }]}>
+                <MaterialCommunityIcons
+                  name={receipt.source === 'qrcode' ? 'qrcode' : 'receipt-text-outline'}
+                  size={22}
+                  color={colors.textMuted}
+                />
+              </View>
+            )}
             <View style={styles.receiptInfo}>
               <Text style={[styles.merchant, { color: colors.text }]} numberOfLines={1}>
-                {receipt.merchant ?? 'Notinha anexada'}
+                {receipt.merchant ?? (receipt.source === 'qrcode' ? 'Nota fiscal' : 'Notinha anexada')}
               </Text>
               {meta.length > 1 && (
                 <Text style={[styles.hint, { color: colors.textMuted }]} numberOfLines={1}>
@@ -242,6 +272,15 @@ export function ReceiptSection({
               <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.danger} />
             </Pressable>
           </View>
+
+          {!!duplicate && (
+            <View style={[styles.warning, { backgroundColor: hexWithAlpha(colors.warning, 0.14) }]}>
+              <MaterialCommunityIcons name="content-duplicate" size={16} color={colors.warning} />
+              <Text style={[styles.warningText, { color: colors.text }]}>
+                Essa nota fiscal já foi lançada antes. Se não for engano, pode continuar.
+              </Text>
+            </View>
+          )}
 
           {mismatch && (
             <View style={[styles.warning, { backgroundColor: hexWithAlpha(colors.warning, 0.14) }]}>
@@ -313,8 +352,8 @@ export function ReceiptSection({
 
       {!receipt && items.length === 0 && !busy && (
         <Text style={[styles.hint, { color: colors.textMuted }]}>
-          Anexe o cupom e eu separo cada item da compra sozinho. A foto é enviada
-          ao Google para a leitura.
+          O QR do cupom traz os itens direto da SEFAZ, sem enviar imagem. Na foto,
+          quem lê é o Google — e ela funciona em qualquer recibo.
         </Text>
       )}
 
@@ -337,6 +376,14 @@ const styles = StyleSheet.create({
   label: { fontSize: 16, fontWeight: '700' },
   labelCount: { fontSize: 13, fontWeight: '600' },
   attachRow: { flexDirection: 'row', gap: 8 },
+  qrBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 50,
+    borderRadius: 14,
+  },
   attachBtn: {
     flex: 1,
     flexDirection: 'row',
@@ -366,6 +413,7 @@ const styles = StyleSheet.create({
   receiptRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   thumbWrap: { borderRadius: 10, overflow: 'hidden' },
   thumb: { width: 48, height: 62, borderRadius: 10 },
+  thumbIcon: { alignItems: 'center', justifyContent: 'center' },
   receiptInfo: { flex: 1, gap: 2 },
   merchant: { fontSize: 15, fontWeight: '700' },
   removeBtn: { padding: 4 },

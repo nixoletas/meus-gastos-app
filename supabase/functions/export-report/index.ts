@@ -6,7 +6,7 @@
 // Resposta: { ok, filename, total, count, xlsxBase64 }
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { buildReportXlsx, makePeriodLabel, ReportExpense } from './report.ts';
+import { buildReportXlsx, makePeriodLabel, ReportExpense, ReportItem } from './report.ts';
 import { sendReportEmail } from './email.ts';
 
 type Body = {
@@ -75,15 +75,26 @@ Deno.serve(async (req) => {
 
     const { start, end } = rangeFor(kind, year, month);
 
-    // Busca gastos do período + categorias (para nome/cor).
-    const [expRes, catRes] = await Promise.all([
+    // Busca gastos do período + categorias (para nome/cor) + subcompras.
+    const [expRes, catRes, itemRes] = await Promise.all([
       supabase
         .from('expenses')
-        .select('amount, note, occurred_at, category_id, subcategory_id')
+        .select('id, amount, note, occurred_at, category_id, subcategory_id')
         .gte('occurred_at', start)
         .lte('occurred_at', end)
         .order('occurred_at', { ascending: false }),
       supabase.from('categories').select('id, name, color'),
+      // `expenses!inner` filtra pela data do lançamento e ainda traz a
+      // categoria de cada item de graça, sem uma segunda viagem ao banco.
+      supabase
+        .from('expense_items')
+        .select(
+          'description, quantity, unit, unit_price, total, ' +
+            'expenses!inner(occurred_at, category_id), receipts(merchant)'
+        )
+        .gte('expenses.occurred_at', start)
+        .lte('expenses.occurred_at', end)
+        .order('position'),
     ]);
 
     if (expRes.error) return json({ error: expRes.error.message }, 500);
@@ -106,6 +117,69 @@ Deno.serve(async (req) => {
       };
     });
 
+    // A consulta com embed é a rápida, mas se ela falhar (relacionamento não
+    // resolvido, cache de schema velho depois de um deploy) o relatório não
+    // pode simplesmente sair sem os itens e sem ninguém saber.
+    let itemRows = itemRes.data ?? [];
+    if (itemRes.error) {
+      console.error('export-report: embed de itens falhou:', itemRes.error.message);
+
+      const ids = (expRes.data ?? []).map((e) => e.id as string);
+      const recuperados: unknown[] = [];
+      // `in()` vai na URL: em lotes, para não estourar o tamanho do request.
+      for (let i = 0; i < ids.length; i += 100) {
+        const lote = ids.slice(i, i + 100);
+        const { data, error } = await supabase
+          .from('expense_items')
+          .select('description, quantity, unit, unit_price, total, expense_id, receipt_id')
+          .in('expense_id', lote)
+          .order('position');
+        if (error) {
+          console.error('export-report: itens por lote falharam:', error.message);
+          break;
+        }
+        recuperados.push(...(data ?? []));
+      }
+      itemRows = recuperados as typeof itemRows;
+    }
+
+    // No caminho reserva não vem o gasto embutido; resolvemos pelo id.
+    const expenseById = new Map(
+      (expRes.data ?? []).map((e) => [
+        e.id as string,
+        { occurred_at: e.occurred_at as string, category_id: e.category_id as string | null },
+      ])
+    );
+
+    type ItemRow = {
+      description: string;
+      quantity: number | string | null;
+      unit: string | null;
+      unit_price: number | string | null;
+      total: number | string;
+      expense_id?: string | null;
+      expenses?: { occurred_at: string; category_id: string | null } | null;
+      receipts?: { merchant: string | null } | null;
+    };
+
+    const items: ReportItem[] = (itemRows as unknown as ItemRow[]).map((i) => {
+      const gasto = i.expenses ?? (i.expense_id ? expenseById.get(i.expense_id) : undefined);
+      return {
+        occurred_at: gasto?.occurred_at ?? '',
+        description: i.description,
+        quantity: Number(i.quantity ?? 1),
+        unit: i.unit,
+        unit_price: i.unit_price === null ? null : Number(i.unit_price),
+        total: Number(i.total),
+        merchant: i.receipts?.merchant ?? '',
+        category: (gasto?.category_id ? catMap.get(gasto.category_id)?.name : '') ?? '',
+      };
+    });
+
+    console.log(
+      `export-report: ${expenses.length} gastos, ${items.length} itens no período ${start}..${end}`
+    );
+
     const total = expenses.reduce((s, e) => s + e.amount, 0);
     const count = expenses.length;
     const periodLabel = makePeriodLabel(kind, year, month);
@@ -118,6 +192,7 @@ Deno.serve(async (req) => {
       periodKind: kind,
       userName,
       expenses,
+      items,
     });
 
     const slug =
@@ -143,6 +218,7 @@ Deno.serve(async (req) => {
       filename,
       total,
       count,
+      itemsCount: items.length,
       sentTo: send ? user.email : null,
       xlsxBase64: toBase64(xlsx),
     });

@@ -35,8 +35,16 @@ export default function NotinhaScreen() {
         setError('Notinha não encontrada.');
         return;
       }
-      setReceipt(data as Receipt);
-      const signed = await receiptSignedUrl((data as Receipt).storage_path);
+      const encontrada = data as Receipt;
+      setReceipt(encontrada);
+
+      // Notinha lida por QR Code não tem foto para mostrar.
+      if (!encontrada.storage_path) {
+        setError('Essa notinha veio do QR Code do cupom, sem foto.');
+        return;
+      }
+
+      const signed = await receiptSignedUrl(encontrada.storage_path);
       if (!alive) return;
       if (!signed) setError('Não consegui abrir a foto.');
       setUrl(signed);

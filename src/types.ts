@@ -33,7 +33,12 @@ export type Receipt = {
   user_id: string;
   /** Nulo enquanto o lançamento ainda não foi salvo. */
   expense_id: string | null;
-  storage_path: string;
+  /** De onde vieram os itens: foto lida por OCR ou QR Code da NFC-e. */
+  source: 'photo' | 'qrcode';
+  /** Nulo quando a notinha veio só do QR Code, sem foto. */
+  storage_path: string | null;
+  /** URL lida do QR Code do cupom (aponta para o portal da SEFAZ da UF). */
+  qr_url: string | null;
   status: ReceiptStatus;
   error: string | null;
   merchant: string | null;

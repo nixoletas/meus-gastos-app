@@ -1,17 +1,20 @@
 /**
  * Estado da notinha dentro da tela de lançamento.
  *
- * A foto sobe sempre com `expense_id` nulo — é rascunho até o usuário
- * confirmar o gasto. Quem amarra notinha, itens e gasto é a RPC
+ * Duas origens: foto da nota (lida por OCR) e QR Code da NFC-e (itens vindos
+ * do portal da SEFAZ). As duas nascem com `expense_id` nulo — é rascunho até
+ * o usuário confirmar o gasto. Quem amarra notinha, itens e gasto é a RPC
  * `save_expense_with_items`, numa transação só. Se a tela for fechada antes
  * disso, o rascunho é apagado (linha + arquivo no Storage).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DraftItem, Receipt } from '../types';
 import {
+  createQrReceipt,
   discardReceipt,
   loadItemsOfExpense,
   loadReceiptOfExpense,
+  parseNfce,
   parseReceipt,
   ParseResult,
   pickReceiptPhoto,
@@ -38,6 +41,8 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
   const [error, setError] = useState<string | null>(null);
   const [mismatch, setMismatch] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  /** Id do gasto que já usou esta mesma nota fiscal. */
+  const [duplicate, setDuplicate] = useState<string | null>(null);
 
   /** Notinha criada nesta sessão e ainda não salva — some se a tela fechar. */
   const pendingRef = useRef<Receipt | null>(null);
@@ -60,8 +65,11 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
         setReceipt(saved);
         setPhase(saved.status === 'failed' ? 'failed' : 'ready');
         setError(saved.error);
-        const url = await receiptSignedUrl(saved.storage_path);
-        if (alive) setPhotoUrl(url);
+        // Notinha vinda de QR Code não tem foto para exibir.
+        if (saved.storage_path) {
+          const url = await receiptSignedUrl(saved.storage_path);
+          if (alive) setPhotoUrl(url);
+        }
       }
       if (savedItems.length > 0) setItems(toDraftItems(savedItems));
     })();
@@ -84,14 +92,47 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
   const runParse = useCallback(async (target: Receipt) => {
     setPhase('reading');
     setError(null);
-    const result = await parseReceipt(target.id);
+    // Cada origem tem seu leitor: QR consulta a SEFAZ, foto vai para o modelo.
+    const result =
+      target.source === 'qrcode' ? await parseNfce(target.id) : await parseReceipt(target.id);
     setReceipt(result.receipt);
     pendingRef.current = result.receipt;
     setItems(toDraftItems(result.items));
     setMismatch(result.mismatch);
+    setDuplicate(result.duplicate ?? null);
     setPhase('ready');
     onParsedRef.current?.(result);
   }, []);
+
+  /**
+   * QR Code do cupom: os itens vêm do portal da SEFAZ, exatos e de graça.
+   * Falhou (UF fora do layout, portal fora do ar), a mensagem já manda
+   * fotografar — o outro caminho continua ali.
+   */
+  const attachQr = useCallback(
+    async (qrUrl: string) => {
+      if (!userId) return;
+      try {
+        setError(null);
+        const previous = receipt;
+        setPhase('reading');
+        setMismatch(false);
+        setDuplicate(null);
+
+        const created = await createQrReceipt(userId, qrUrl);
+        pendingRef.current = created;
+        setReceipt(created);
+        setPhotoUrl(null);
+        if (previous) void discardReceipt(previous);
+
+        await runParse(created);
+      } catch (err) {
+        setPhase('failed');
+        setError(err instanceof Error ? err.message : 'Não consegui ler esse QR Code.');
+      }
+    },
+    [userId, receipt, runParse]
+  );
 
   const attach = useCallback(
     async (source: ReceiptSource) => {
@@ -106,6 +147,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
         setPhase('uploading');
         setPhotoUrl(photo.uri); // prévia local, sem esperar URL assinada
         setMismatch(false);
+        setDuplicate(null);
 
         const created = await uploadReceipt(userId, photo.base64, null);
         pendingRef.current = created;
@@ -139,6 +181,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
     setPhase('idle');
     setError(null);
     setMismatch(false);
+    setDuplicate(null);
     pendingRef.current = null;
     if (target) await discardReceipt(target);
   }, [receipt]);
@@ -157,6 +200,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
     setPhase('idle');
     setError(null);
     setMismatch(false);
+    setDuplicate(null);
   }, []);
 
   return {
@@ -166,8 +210,10 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
     phase,
     error,
     mismatch,
+    duplicate,
     photoUrl,
     attach,
+    attachQr,
     retry,
     remove,
     markSaved,
