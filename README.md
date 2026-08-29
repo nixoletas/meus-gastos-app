@@ -82,16 +82,9 @@ npm install
 > rodar de novo com segurança. Ele inclui a função `delete_account()`, usada
 > pela opção "Excluir conta".
 
-### 3.1. Login: Google + código por e-mail (OTP)
+### 3.1. Login: Google
 
-O app entra **sem senha** — só com Google ou um **código de 6 dígitos** enviado por e-mail.
-
-**Código por e-mail (OTP):**
-1. Em **Authentication → Emails → "Magic Link"**, cole o conteúdo de
-   [`supabase/email-otp.html`](./supabase/email-otp.html). Ele usa a variável
-   `{{ .Token }}` (o código), então o usuário recebe o **código** em vez de um link.
-2. Em **Authentication → Providers → Email**, deixe **"Confirm email" desligado**
-   (com OTP não há link de confirmação).
+O app entra **sem senha** — só com a conta Google.
 
 **Google:**
 1. Em **Authentication → Providers → Google**, ative e preencha o **Client ID/Secret**

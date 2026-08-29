@@ -28,7 +28,6 @@ Guia prático para colocar o app no ar (foco em **Android**; iOS fica para depoi
 
 ### 4. Supabase em modo produção
 - [ ] Rodar `supabase/schema.sql` no projeto de produção
-- [ ] Colar o template `supabase/email-otp.html` em Auth → Emails → Magic Link
 - [ ] Ativar o Google provider e configurar as Redirect URLs (ver README)
 - [ ] Conferir que o Realtime está habilitado nas tabelas
 - [ ] Testar que um usuário NÃO acessa dados de outro (RLS)
