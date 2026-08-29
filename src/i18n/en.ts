@@ -265,6 +265,13 @@ export const en: Dict = {
   },
 
   iconPicker: {
+    tabIcons: 'Icons',
+    tabEmojis: 'Emojis',
+    emojiSearchPlaceholder: 'Search emoji (e.g. pizza, car...)',
+    pasteEmoji: 'Or paste any emoji',
+    emojiEmpty: 'No emoji found.',
+    use: 'Use',
+    count: (n: number) => `${n} ${n === 1 ? 'icon' : 'icons'}`,
     title: 'Pick an icon',
     searchPlaceholder: 'Search icon (e.g. food, car...)',
     empty: 'No icon found.',

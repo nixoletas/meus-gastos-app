@@ -268,6 +268,13 @@ export const pt = {
   },
 
   iconPicker: {
+    tabIcons: 'Ícones',
+    tabEmojis: 'Emojis',
+    emojiSearchPlaceholder: 'Buscar emoji (ex.: pizza, carro...)',
+    pasteEmoji: 'Ou cole qualquer emoji',
+    emojiEmpty: 'Nenhum emoji encontrado.',
+    use: 'Usar',
+    count: (n: number) => `${n} ${n === 1 ? 'ícone' : 'ícones'}`,
     title: 'Escolha um ícone',
     searchPlaceholder: 'Buscar ícone (ex.: comida, carro...)',
     empty: 'Nenhum ícone encontrado.',
