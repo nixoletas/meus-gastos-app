@@ -1,0 +1,4 @@
+{
+  "NSCameraUsageDescription": "Meus Gastos uses the camera to photograph your receipt and to scan the QR code printed on it.",
+  "NSPhotoLibraryUsageDescription": "Meus Gastos accesses your photos so you can attach a receipt to an expense."
+}

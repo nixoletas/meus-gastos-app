@@ -37,17 +37,21 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "O Meus Gastos usa a câmera para fotografar a notinha e separar os itens da compra.",
+          "cameraPermission": "O Meus Gastos usa a câmera para fotografar a notinha e ler o QR Code do cupom fiscal.",
           "photosPermission": "O Meus Gastos acessa suas fotos para você anexar a notinha ao gasto."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "O Meus Gastos usa a câmera para ler o QR Code do cupom fiscal."
+          "cameraPermission": "O Meus Gastos usa a câmera para fotografar a notinha e ler o QR Code do cupom fiscal."
         }
       ]
     ],
+    "locales": {
+      "pt-BR": "./locales/pt-BR.json",
+      "en": "./locales/en.json"
+    },
     "experiments": {
       "typedRoutes": true
     },
