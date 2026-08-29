@@ -21,11 +21,14 @@ import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
 import { ReportExportModal } from '../../src/components/ReportExportModal';
 import { useAuth } from '../../src/context/AuthContext';
+import { useI18n } from '../../src/i18n';
+import { LANG_LABELS, LANGS } from '../../src/i18n/active';
 import { CONTACT_EMAIL, FEEDBACK_FORM_URL } from '../../src/legal/content';
 import { ThemePreference, useTheme } from '../../src/theme/ThemeContext';
 
 export default function AjustesScreen() {
   const { colors, preference, setPreference } = useTheme();
+  const { t, lang, setLang } = useI18n();
   const { session, signOut, deleteAccount } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -50,8 +53,9 @@ export default function AjustesScreen() {
     setTimeout(() => setEmailCopied(false), 1800);
   }
 
-  // Só libera a exclusão quando a pessoa digita exatamente "excluir".
-  const canConfirmDelete = confirmText.trim().toLowerCase() === 'excluir';
+  // Só libera a exclusão quando a pessoa digita exatamente a palavra pedida.
+  const canConfirmDelete =
+    confirmText.trim().toLowerCase() === t.settings.deleteConfirmWord;
 
   // Avatar e nome vindos do Google (salvos no user_metadata pelo Supabase).
   const meta = (session?.user.user_metadata ?? {}) as Record<string, any>;
@@ -69,9 +73,9 @@ export default function AjustesScreen() {
   }
 
   const themeOptions: { key: ThemePreference; label: string; icon: any }[] = [
-    { key: 'light', label: 'Claro', icon: 'white-balance-sunny' },
-    { key: 'dark', label: 'Escuro', icon: 'weather-night' },
-    { key: 'system', label: 'Sistema', icon: 'cellphone-cog' },
+    { key: 'light', label: t.settings.themeLight, icon: 'white-balance-sunny' },
+    { key: 'dark', label: t.settings.themeDark, icon: 'weather-night' },
+    { key: 'system', label: t.settings.themeSystem, icon: 'cellphone-cog' },
   ];
 
   async function runDelete() {
@@ -80,7 +84,7 @@ export default function AjustesScreen() {
     setDeleting(false);
     if (error) {
       setConfirmOpen(false);
-      Alert.alert('Erro', error);
+      Alert.alert(t.common.error, error);
     }
     // Em caso de sucesso, o signOut redireciona automaticamente para o login.
   }
@@ -92,10 +96,12 @@ export default function AjustesScreen() {
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, { color: colors.text }]}>Ajustes</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{t.settings.title}</Text>
 
       {/* Tema */}
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>APARÊNCIA</Text>
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+        {t.settings.appearance}
+      </Text>
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <View style={styles.themeRow}>
           {themeOptions.map((opt) => {
@@ -133,8 +139,53 @@ export default function AjustesScreen() {
         </View>
       </View>
 
+      {/* Idioma */}
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+        {t.settings.language}
+      </Text>
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <View style={styles.themeRow}>
+          {LANGS.map((code) => {
+            const active = lang === code;
+            return (
+              <Pressable
+                key={code}
+                onPress={() => {
+                  setLang(code);
+                }}
+                style={[
+                  styles.themeOption,
+                  {
+                    backgroundColor: active
+                      ? hexWithAlpha(colors.primary, 0.14)
+                      : colors.surface,
+                    borderColor: active ? colors.primary : 'transparent',
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={code === 'en' ? 'alphabetical-variant' : 'translate'}
+                  size={24}
+                  color={active ? colors.primary : colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.themeText,
+                    { color: active ? colors.primary : colors.textMuted },
+                  ]}
+                >
+                  {LANG_LABELS[code]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
       {/* Conta */}
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>CONTA</Text>
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+        {t.settings.account}
+      </Text>
       <View style={[styles.card, { backgroundColor: colors.card, gap: 4 }]}>
         <View style={styles.accountRow}>
           {avatarUrl ? (
@@ -146,10 +197,10 @@ export default function AjustesScreen() {
           )}
           <View style={{ flex: 1 }}>
             <Text style={[styles.linkTitle, { color: colors.text }]} numberOfLines={1}>
-              {displayName ?? session?.user.email ?? 'Conectado'}
+              {displayName ?? session?.user.email ?? t.settings.connected}
             </Text>
             <Text style={[styles.linkSub, { color: colors.textMuted }]} numberOfLines={1}>
-              {displayName ? session?.user.email : 'Sincronizado na nuvem'}
+              {displayName ? session?.user.email : t.settings.syncedInCloud}
             </Text>
           </View>
         </View>
@@ -159,21 +210,25 @@ export default function AjustesScreen() {
           style={[styles.logoutBtn, { backgroundColor: colors.surface }]}
         >
           <MaterialCommunityIcons name="logout" size={20} color={colors.text} />
-          <Text style={[styles.logoutText, { color: colors.text }]}>Sair</Text>
+          <Text style={[styles.logoutText, { color: colors.text }]}>{t.settings.signOut}</Text>
         </Pressable>
       </View>
 
       {/* Relatórios */}
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>RELATÓRIOS</Text>
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+        {t.settings.reports}
+      </Text>
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <Pressable onPress={() => setReportOpen(true)} style={styles.reportRow}>
           <View style={[styles.linkIcon, { backgroundColor: colors.primarySoft }]}>
             <MaterialCommunityIcons name="file-excel" size={22} color={colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.linkTitle, { color: colors.text }]}>Exportar para Excel</Text>
+            <Text style={[styles.linkTitle, { color: colors.text }]}>
+              {t.settings.exportExcel}
+            </Text>
             <Text style={[styles.linkSub, { color: colors.textMuted }]} numberOfLines={1}>
-              Relatório mensal ou anual no seu e-mail
+              {t.settings.exportExcelSub}
             </Text>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
@@ -181,14 +236,18 @@ export default function AjustesScreen() {
       </View>
 
       {/* Sobre / Legal */}
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>SOBRE</Text>
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+        {t.settings.about}
+      </Text>
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <Pressable
           onPress={() => router.push({ pathname: '/legal', params: { doc: 'privacy' } })}
           style={styles.aboutRow}
         >
           <MaterialCommunityIcons name="shield-lock-outline" size={20} color={colors.textMuted} />
-          <Text style={[styles.aboutText, { color: colors.text }]}>Política de Privacidade</Text>
+          <Text style={[styles.aboutText, { color: colors.text }]}>
+            {t.settings.privacyPolicy}
+          </Text>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -197,7 +256,9 @@ export default function AjustesScreen() {
           style={styles.aboutRow}
         >
           <MaterialCommunityIcons name="file-document-outline" size={20} color={colors.textMuted} />
-          <Text style={[styles.aboutText, { color: colors.text }]}>Termos de Uso</Text>
+          <Text style={[styles.aboutText, { color: colors.text }]}>
+            {t.settings.termsOfUse}
+          </Text>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -207,7 +268,7 @@ export default function AjustesScreen() {
         >
           <MaterialCommunityIcons name="message-text-outline" size={20} color={colors.textMuted} />
           <Text style={[styles.aboutText, { color: colors.text }]}>
-            Reclamar, pedir feature ou tirar dúvida
+            {t.settings.feedback}
           </Text>
           <MaterialCommunityIcons name="open-in-new" size={18} color={colors.textMuted} />
         </Pressable>
@@ -219,7 +280,7 @@ export default function AjustesScreen() {
             color={emailCopied ? colors.primary : colors.textMuted}
           />
           <Text style={[styles.aboutText, { color: emailCopied ? colors.primary : colors.text }]}>
-            {emailCopied ? 'E-mail copiado!' : 'Falar com a gente'}
+            {emailCopied ? t.settings.emailCopied : t.settings.contactUs}
           </Text>
           <Animated.View
             style={{
@@ -242,29 +303,32 @@ export default function AjustesScreen() {
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <View style={styles.aboutRow}>
           <MaterialCommunityIcons name="information-outline" size={20} color={colors.textMuted} />
-          <Text style={[styles.aboutText, { color: colors.text }]}>Versão</Text>
+          <Text style={[styles.aboutText, { color: colors.text }]}>{t.settings.version}</Text>
           <Text style={[styles.aboutValue, { color: colors.textMuted }]}>{appVersion}</Text>
         </View>
       </View>
 
       {/* Zona de perigo */}
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>ZONA DE PERIGO</Text>
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+        {t.settings.dangerZone}
+      </Text>
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <Pressable
           onPress={openDeleteModal}
           style={[styles.deleteBtn, { backgroundColor: colors.dangerSoft }]}
         >
           <MaterialCommunityIcons name="account-remove" size={20} color={colors.danger} />
-          <Text style={[styles.deleteText, { color: colors.danger }]}>Excluir conta</Text>
+          <Text style={[styles.deleteText, { color: colors.danger }]}>
+            {t.settings.deleteAccount}
+          </Text>
         </Pressable>
         <Text style={[styles.deleteHint, { color: colors.textMuted }]}>
-          Apaga permanentemente sua conta e todos os dados (gastos, categorias e
-          limites).
+          {t.settings.deleteHint}
         </Text>
       </View>
 
       <Text style={[styles.footerNote, { color: colors.textMuted }]}>
-        Meus Gastos · feito no Brasil 🇧🇷
+        {t.settings.footer}
       </Text>
 
       {/* Modal emocional de confirmação de exclusão */}
@@ -281,22 +345,23 @@ export default function AjustesScreen() {
             </View>
 
             <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Já vai mesmo? Vamos sentir sua falta...
+              {t.settings.deleteModalTitle}
             </Text>
             <Text style={[styles.modalBody, { color: colors.textMuted }]}>
-              A gente acompanhou cada gasto seu com carinho. Se você excluir sua
-              conta, todo esse histórico — seus gastos, categorias e limites — vai
-              desaparecer para sempre, e não tem como voltar atrás. 💔
+              {t.settings.deleteModalBody}
             </Text>
             <Text style={[styles.modalBody, { color: colors.textMuted }]}>
-              Para confirmar, digite{' '}
-              <Text style={{ color: colors.danger, fontWeight: '800' }}>excluir</Text> abaixo.
+              {t.settings.deleteConfirmPrefix}{' '}
+              <Text style={{ color: colors.danger, fontWeight: '800' }}>
+                {t.settings.deleteConfirmWord}
+              </Text>
+              {t.settings.deleteConfirmSuffix}
             </Text>
 
             <TextInput
               value={confirmText}
               onChangeText={setConfirmText}
-              placeholder="excluir"
+              placeholder={t.settings.deleteConfirmWord}
               placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
@@ -318,7 +383,7 @@ export default function AjustesScreen() {
               style={[styles.modalStay, { backgroundColor: colors.primary }]}
             >
               <Text style={[styles.modalStayText, { color: colors.onPrimary }]}>
-                Quero ficar 💚
+                {t.settings.deleteStay}
               </Text>
             </PressableScale>
 
@@ -336,7 +401,7 @@ export default function AjustesScreen() {
                     { color: canConfirmDelete ? colors.danger : colors.textMuted },
                   ]}
                 >
-                  Excluir minha conta mesmo assim
+                  {t.settings.deleteAnyway}
                 </Text>
               )}
             </Pressable>

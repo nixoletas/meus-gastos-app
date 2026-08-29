@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useT } from '../i18n';
+import { getActiveLang } from '../i18n/active';
 import { loadItemsOfExpense } from '../lib/receipts';
 import { useTheme } from '../theme/ThemeContext';
 import { Text } from '../theme/typography';
@@ -13,14 +15,23 @@ type Props = {
 };
 
 /** "1,24 kg" ou "3 un" — só aparece quando diz alguma coisa. */
-function quantidadeLabel(quantity: number, unit: string | null): string | null {
+function quantidadeLabel(
+  quantity: number,
+  unit: string | null,
+  defaultUnit: string
+): string | null {
   const valor = Number(quantity);
   if (!Number.isFinite(valor) || valor <= 0) return null;
   if (valor === 1 && !unit) return null;
+  const separador = getActiveLang() === 'en' ? '.' : ',';
   const numero = Number.isInteger(valor)
     ? String(valor)
-    : valor.toFixed(3).replace(/0+$/, '').replace(/\.$/, '').replace('.', ',');
-  return `${numero} ${unit ?? 'un'}`;
+    : valor
+        .toFixed(3)
+        .replace(/0+$/, '')
+        .replace(/\.$/, '')
+        .replace('.', separador);
+  return `${numero} ${unit ?? defaultUnit}`;
 }
 
 /**
@@ -31,6 +42,7 @@ function quantidadeLabel(quantity: number, unit: string | null): string | null {
  */
 export function ExpenseItems({ expenseId, color }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const [items, setItems] = useState<ExpenseItem[] | null>(null);
 
   useEffect(() => {
@@ -54,7 +66,7 @@ export function ExpenseItems({ expenseId, color }: Props) {
   if (items.length === 0) {
     return (
       <Text style={[styles.vazio, { color: colors.textMuted }]}>
-        Esse lançamento não tem itens.
+        {t.expenseRow.noItems}
       </Text>
     );
   }
@@ -62,7 +74,11 @@ export function ExpenseItems({ expenseId, color }: Props) {
   return (
     <View style={styles.lista}>
       {items.map((item) => {
-        const quantidade = quantidadeLabel(Number(item.quantity), item.unit);
+        const quantidade = quantidadeLabel(
+          Number(item.quantity),
+          item.unit,
+          t.expenseRow.defaultUnit
+        );
         return (
           <View key={item.id} style={styles.linha}>
             <View style={[styles.marcador, { backgroundColor: color }]} />

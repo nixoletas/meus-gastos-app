@@ -8,8 +8,9 @@ import { Modal,
   View,
 } from 'react-native';
 import { Text } from '../theme/typography';
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
-import { monthName, toISODate } from '../utils/date';
+import { monthName, toISODate, weekdayInitials } from '../utils/date';
 
 type Props = {
   visible: boolean;
@@ -20,11 +21,10 @@ type Props = {
   onClose: () => void;
 };
 
-const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-
 /** Calendário mensal próprio (funciona em mobile e web), com navegação fácil. */
 export function CalendarModal({ visible, selected, maxDate, onSelect, onClose }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const [view, setView] = useState(() => new Date(selected));
 
   // Sincroniza o mês exibido sempre que o modal reabre.
@@ -73,7 +73,7 @@ export function CalendarModal({ visible, selected, maxDate, onSelect, onClose }:
 
           {/* Dias da semana */}
           <View style={styles.weekRow}>
-            {WEEKDAYS.map((w, i) => (
+            {weekdayInitials().map((w, i) => (
               <Text key={i} style={[styles.weekday, { color: colors.textMuted }]}>
                 {w}
               </Text>
@@ -133,7 +133,7 @@ export function CalendarModal({ visible, selected, maxDate, onSelect, onClose }:
             style={[styles.todayBtn, { backgroundColor: colors.surface }]}
           >
             <MaterialCommunityIcons name="calendar-today" size={18} color={colors.primary} />
-            <Text style={[styles.todayText, { color: colors.primary }]}>Hoje</Text>
+            <Text style={[styles.todayText, { color: colors.primary }]}>{t.calendar.today}</Text>
           </Pressable>
         </Pressable>
       </Pressable>

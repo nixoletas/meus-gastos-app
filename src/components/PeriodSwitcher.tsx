@@ -6,6 +6,7 @@ import { Pressable,
   View,
 } from 'react-native';
 import { Text } from '../theme/typography';
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { Period, periodLabel, shiftPeriod } from '../utils/date';
 
@@ -24,6 +25,7 @@ export function PeriodSwitcher({
   onChangeDate,
 }: Props) {
   const { colors } = useTheme();
+  const t = useT();
 
   return (
     <View style={styles.wrap}>
@@ -48,7 +50,7 @@ export function PeriodSwitcher({
                   { color: active ? colors.primary : colors.textMuted },
                 ]}
               >
-                {p === 'month' ? 'Mês' : 'Ano'}
+                {p === 'month' ? t.common.month : t.common.year}
               </Text>
             </Pressable>
           );

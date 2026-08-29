@@ -22,6 +22,7 @@ import {
   readReceipt,
 } from './reader.ts';
 import { checkSum, normalizeParsed } from '../_shared/receipt.ts';
+import { pickLang, t } from '../_shared/i18n.ts';
 
 /** Teto diário de notinhas por usuário: protege a cota (e a fatura, se houver). */
 const DAILY_LIMIT = Number(Deno.env.get('RECEIPTS_DAILY_LIMIT') ?? '40');
@@ -29,7 +30,11 @@ const DAILY_LIMIT = Number(Deno.env.get('RECEIPTS_DAILY_LIMIT') ?? '40');
 /** A imagem já chega redimensionada do app; acima disso é abuso ou bug. */
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 
-type Body = { receipt_id?: string };
+type Body = {
+  receipt_id?: string;
+  /** Idioma das mensagens devolvidas; 'pt-BR' quando não vem. */
+  lang?: string;
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -61,18 +66,21 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  // O idioma só chega no corpo; até lê-lo, as respostas saem no padrão.
+  let lang = pickLang(undefined);
+  let dict = t(lang);
   if (req.method !== 'POST') {
-    return json({ error: 'Método não permitido' }, 405);
+    return json({ error: dict.http.methodNotAllowed }, 405);
   }
 
   const provider = currentProvider();
   const apiKey = apiKeyFor(provider);
   if (!apiKey) {
-    return json({ error: missingKeyMessage(provider) }, 500);
+    return json({ error: missingKeyMessage(provider, lang) }, 500);
   }
 
   const authHeader = req.headers.get('Authorization') ?? '';
-  if (!authHeader) return json({ error: 'Não autenticado' }, 401);
+  if (!authHeader) return json({ error: dict.http.notAuthenticated }, 401);
 
   // Cliente com o JWT do usuário: respeita RLS, só enxerga os dados dele.
   const supabase = createClient(
@@ -82,11 +90,13 @@ Deno.serve(async (req) => {
   );
 
   const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr || !userData.user) return json({ error: 'Sessão inválida' }, 401);
+  if (userErr || !userData.user) return json({ error: dict.http.invalidSession }, 401);
 
   const body = (await req.json().catch(() => ({}))) as Body;
+  lang = pickLang(body.lang);
+  dict = t(lang);
   const receiptId = body.receipt_id;
-  if (!receiptId) return json({ error: 'receipt_id é obrigatório' }, 400);
+  if (!receiptId) return json({ error: dict.http.receiptIdRequired }, 400);
 
   const { data: receipt, error: receiptErr } = await supabase
     .from('receipts')
@@ -95,7 +105,7 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   if (receiptErr) return json({ error: receiptErr.message }, 500);
-  if (!receipt) return json({ error: 'Notinha não encontrada' }, 404);
+  if (!receipt) return json({ error: dict.http.receiptNotFound }, 404);
 
   /** Marca a falha na própria linha: a tela mostra o motivo e oferece "tentar de novo". */
   const fail = async (message: string, status = 400) => {
@@ -117,7 +127,7 @@ Deno.serve(async (req) => {
 
   if (!countErr && (count ?? 0) > DAILY_LIMIT) {
     return await fail(
-      `Você já leu ${DAILY_LIMIT} notinhas nas últimas 24 horas. Tente de novo amanhã.`,
+      dict.receipt.dailyLimit(DAILY_LIMIT),
       429
     );
   }
@@ -133,29 +143,27 @@ Deno.serve(async (req) => {
       .download(receipt.storage_path);
 
     if (downloadErr || !file) {
-      return await fail('Não consegui abrir a foto da notinha.', 404);
+      return await fail(dict.receipt.cantOpenPhoto, 404);
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (bytes.length === 0) {
-      return await fail('A foto chegou vazia. Tente enviar de novo.');
+      return await fail(dict.receipt.emptyPhoto);
     }
     if (bytes.length > MAX_IMAGE_BYTES) {
-      return await fail('A foto está grande demais. Tire outra com menos zoom.', 413);
+      return await fail(dict.receipt.photoTooBig, 413);
     }
 
     const rawOutput = await readReceipt(provider, {
       base64: toBase64(bytes),
       mediaType: mediaTypeFor(receipt.storage_path, file.type),
       apiKey,
+      lang,
     });
 
     const parsed = normalizeParsed(rawOutput);
     if (parsed.items.length === 0 && parsed.total === null) {
-      return await fail(
-        'Não achei nenhum item nessa foto. Confira se a nota está inteira e legível.',
-        422
-      );
+      return await fail(dict.receipt.noItems, 422);
     }
 
     const { itemsTotal, mismatch } = checkSum(parsed);
@@ -186,6 +194,6 @@ Deno.serve(async (req) => {
     }
     console.error('parse-receipt', err);
     const detail = err instanceof Error ? err.message : String(err);
-    return await fail(`Falha ao ler a notinha: ${detail}`, 500);
+    return await fail(`${dict.receipt.readFailed} (${detail})`, 500);
   }
 });

@@ -6,6 +6,7 @@
 // Resposta: { ok, filename, total, count, xlsxBase64 }
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { pickLang, t } from '../_shared/i18n.ts';
 import { buildReportXlsx, makePeriodLabel, ReportExpense, ReportItem } from './report.ts';
 import { sendReportEmail } from './email.ts';
 
@@ -14,6 +15,8 @@ type Body = {
   year: number;
   month?: number;
   send?: boolean; // default true
+  /** Idioma do relatório e do e-mail; 'pt-BR' quando não vem. */
+  lang?: string;
 };
 
 function json(body: unknown, status = 200) {
@@ -47,13 +50,15 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  // O idioma só é conhecido depois de ler o corpo; até lá, o padrão serve.
+  let dict = t('pt-BR');
   if (req.method !== 'POST') {
-    return json({ error: 'Método não permitido' }, 405);
+    return json({ error: dict.http.methodNotAllowed }, 405);
   }
 
   try {
     const authHeader = req.headers.get('Authorization') ?? '';
-    if (!authHeader) return json({ error: 'Não autenticado' }, 401);
+    if (!authHeader) return json({ error: dict.http.notAuthenticated }, 401);
 
     // Cliente com o JWT do usuário: respeita RLS, só lê os dados dele.
     const supabase = createClient(
@@ -63,10 +68,12 @@ Deno.serve(async (req) => {
     );
 
     const { data: userData, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !userData.user) return json({ error: 'Sessão inválida' }, 401);
+    if (userErr || !userData.user) return json({ error: dict.http.invalidSession }, 401);
     const user = userData.user;
 
     const body = (await req.json()) as Body;
+    const lang = pickLang(body.lang);
+    dict = t(lang);
     const kind: 'month' | 'year' = body.period === 'year' ? 'year' : 'month';
     const now = new Date();
     const year = Number.isFinite(body.year) ? body.year : now.getFullYear();
@@ -111,7 +118,7 @@ Deno.serve(async (req) => {
         occurred_at: e.occurred_at,
         amount: Number(e.amount),
         note: e.note,
-        category: cat?.name ?? 'Sem categoria',
+        category: cat?.name ?? dict.report.noCategory,
         subcategory: sub?.name ?? '',
         color: cat?.color ?? '#64748B',
       };
@@ -182,14 +189,17 @@ Deno.serve(async (req) => {
 
     const total = expenses.reduce((s, e) => s + e.amount, 0);
     const count = expenses.length;
-    const periodLabel = makePeriodLabel(kind, year, month);
+    const periodLabel = makePeriodLabel(kind, year, month, lang);
 
     const meta = (user.user_metadata ?? {}) as Record<string, string>;
-    const userName = (meta.full_name ?? meta.name ?? user.email ?? 'você').split(' ')[0];
+    const userName = (meta.full_name ?? meta.name ?? user.email ?? dict.report.youFallback).split(
+      ' '
+    )[0];
 
     const xlsx = await buildReportXlsx({
       periodLabel,
       periodKind: kind,
+      lang,
       userName,
       expenses,
       items,
@@ -200,7 +210,7 @@ Deno.serve(async (req) => {
     const filename = `meus-gastos-${slug}.xlsx`;
 
     if (send) {
-      if (!user.email) return json({ error: 'Usuário sem e-mail cadastrado' }, 400);
+      if (!user.email) return json({ error: dict.http.noEmail }, 400);
       await sendReportEmail({
         to: user.email,
         userName,
@@ -210,6 +220,7 @@ Deno.serve(async (req) => {
         count,
         filename,
         xlsx,
+        lang,
       });
     }
 
@@ -224,6 +235,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error('export-report error:', err);
-    return json({ error: (err as Error).message ?? 'Erro inesperado' }, 500);
+    return json({ error: (err as Error).message ?? dict.http.unexpected }, 500);
   }
 });

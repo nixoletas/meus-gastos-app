@@ -3,18 +3,21 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useI18n } from '../src/i18n';
 import { useTheme } from '../src/theme/ThemeContext';
 import { Text } from '../src/theme/typography';
-import { LAST_UPDATED, PRIVACY, TERMS } from '../src/legal/content';
+import { legalFor } from '../src/legal/content';
 
 export default function LegalScreen() {
   const { colors } = useTheme();
+  const { t, lang } = useI18n();
   const router = useRouter();
   const { doc } = useLocalSearchParams<{ doc?: string }>();
 
+  const legal = legalFor(lang);
   const isTerms = doc === 'terms';
-  const title = isTerms ? 'Termos de Uso' : 'Política de Privacidade';
-  const sections = isTerms ? TERMS : PRIVACY;
+  const title = isTerms ? t.settings.termsOfUse : t.settings.privacyPolicy;
+  const sections = isTerms ? legal.terms : legal.privacy;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -30,7 +33,7 @@ export default function LegalScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={[styles.updated, { color: colors.textMuted }]}>
-          Última atualização: {LAST_UPDATED}
+          {t.legal.lastUpdated(legal.lastUpdated)}
         </Text>
 
         {sections.map((s, i) => (

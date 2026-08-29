@@ -19,6 +19,7 @@ import { ExpenseItems } from '../../src/components/ExpenseItems';
 import { PeriodSwitcher } from '../../src/components/PeriodSwitcher';
 import { PieChart, PieSlice } from '../../src/components/PieChart';
 import { useData } from '../../src/context/DataContext';
+import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { useRouter, useScrollToTop } from 'expo-router';
 import {
@@ -32,6 +33,7 @@ import { Period, relativeDayLabel } from '../../src/utils/date';
 
 export default function GraficosScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { expenses, categories } = useData();
@@ -101,7 +103,7 @@ export default function GraficosScreen() {
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, { color: colors.text }]}>Gráficos</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{t.charts.title}</Text>
 
       <PeriodSwitcher
         period={period}
@@ -116,10 +118,10 @@ export default function GraficosScreen() {
             <MaterialCommunityIcons name="chart-donut" size={40} color={colors.primary} />
           </View>
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Sem dados neste período
+            {t.charts.emptyTitle}
           </Text>
           <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-            Lance alguns gastos para ver a distribuição por categoria.
+            {t.charts.emptyText}
           </Text>
         </View>
       ) : (
@@ -141,23 +143,25 @@ export default function GraficosScreen() {
                     ]}
                   />
                   <Text style={[styles.centerName, { color: colors.text }]} numberOfLines={1}>
-                    {selected.category?.name ?? 'Sem categoria'}
+                    {selected.category?.name ?? t.common.noCategory}
                   </Text>
                   <Text style={[styles.centerValue, { color: colors.text }]}>
                     {formatBRL(selected.total)}
                   </Text>
                   <Text style={[styles.centerLabel, { color: colors.textMuted }]}>
-                    {Math.round(selected.percent * 100)}% do total
+                    {t.charts.percentOfTotal(Math.round(selected.percent * 100))}
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={[styles.centerLabel, { color: colors.textMuted }]}>Total</Text>
+                  <Text style={[styles.centerLabel, { color: colors.textMuted }]}>
+                    {t.charts.total}
+                  </Text>
                   <Text style={[styles.centerValue, { color: colors.text }]}>
                     {formatBRL(total)}
                   </Text>
                   <Text style={[styles.centerHint, { color: colors.textMuted }]}>
-                    toque numa fatia
+                    {t.charts.tapSlice}
                   </Text>
                 </>
               )}
@@ -170,7 +174,9 @@ export default function GraficosScreen() {
               style={[styles.clearBtn, { backgroundColor: colors.surface }]}
             >
               <MaterialCommunityIcons name="close" size={14} color={colors.textMuted} />
-              <Text style={[styles.clearText, { color: colors.textMuted }]}>Limpar filtro</Text>
+              <Text style={[styles.clearText, { color: colors.textMuted }]}>
+                {t.charts.clearFilter}
+              </Text>
             </Pressable>
           )}
 
@@ -216,7 +222,7 @@ export default function GraficosScreen() {
                     <View style={{ flex: 1 }}>
                       <View style={styles.legendTop}>
                         <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>
-                          {item.category?.name ?? 'Sem categoria'}
+                          {item.category?.name ?? t.common.noCategory}
                         </Text>
                         <Text style={[styles.legendValue, { color: colors.text }]}>
                           {formatBRL(item.total)}
@@ -276,7 +282,7 @@ export default function GraficosScreen() {
                                 <AppIcon icon={s.sub?.icon ?? 'tag'} size={15} color={catColor} />
                               </View>
                               <Text style={[styles.subName, { color: colors.text }]} numberOfLines={1}>
-                                {s.sub?.name ?? 'Sem subcategoria'}
+                                {s.sub?.name ?? t.common.noSubcategory}
                               </Text>
                               <Text style={[styles.subPercent, { color: colors.textMuted }]}>
                                 {Math.round(s.percent * 100)}%
@@ -308,7 +314,8 @@ export default function GraficosScreen() {
                                           style={[styles.expenseName, { color: colors.text }]}
                                           numberOfLines={1}
                                         >
-                                          {e.note?.trim() || (s.sub?.name ?? 'Sem subcategoria')}
+                                          {e.note?.trim() ||
+                                            (s.sub?.name ?? t.common.noSubcategory)}
                                         </Text>
                                         <Text style={[styles.expenseDate, { color: colors.textMuted }]}>
                                           {relativeDayLabel(e.occurred_at)}

@@ -15,6 +15,7 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -77,6 +78,7 @@ function Particle({ index, play }: { index: number; play: boolean }) {
 /** Overlay que comemora cada lançamento de gasto (feedback de dopamina). */
 export function SuccessOverlay({ visible, amountLabel, onDone }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const overlayOpacity = useSharedValue(0);
   const ringScale = useSharedValue(0);
   const ringOpacity = useSharedValue(0);
@@ -157,7 +159,7 @@ export function SuccessOverlay({ visible, amountLabel, onDone }: Props) {
 
         <Animated.View style={[styles.labelWrap, labelStyle]}>
           <Text style={[styles.added, { color: colors.textMuted }]}>
-            Gasto registrado 🎉
+            {t.success.registered}
           </Text>
           <Text style={[styles.amount, { color: colors.text }]}>{amountLabel}</Text>
         </Animated.View>

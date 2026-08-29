@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { DataProvider } from '../src/context/DataContext';
 import { OnboardingProvider, useOnboarding } from '../src/context/OnboardingContext';
+import { I18nProvider } from '../src/i18n';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
 import { APP_FONTS } from '../src/theme/typography';
 
@@ -152,14 +153,16 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <OnboardingProvider>
-            <AuthProvider>
-              <DataProvider>
-                <ThemedStatusBar />
-                <AuthGate />
-              </DataProvider>
-            </AuthProvider>
-          </OnboardingProvider>
+          <I18nProvider>
+            <OnboardingProvider>
+              <AuthProvider>
+                <DataProvider>
+                  <ThemedStatusBar />
+                  <AuthGate />
+                </DataProvider>
+              </AuthProvider>
+            </OnboardingProvider>
+          </I18nProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

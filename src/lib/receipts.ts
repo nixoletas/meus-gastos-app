@@ -7,6 +7,8 @@
  */
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { tNow } from '../i18n';
+import { getActiveLang } from '../i18n/active';
 import { DraftItem, ExpenseItem, Receipt } from '../types';
 import { supabase } from './supabase';
 
@@ -73,12 +75,12 @@ export async function pickReceiptPhoto(
   if (source === 'camera') {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      throw new Error('Preciso da câmera para fotografar a notinha. Libere nos ajustes do aparelho.');
+      throw new Error(tNow().errors.cameraPermission);
     }
   } else {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      throw new Error('Preciso do acesso às fotos para anexar a notinha.');
+      throw new Error(tNow().errors.photosPermission);
     }
   }
 
@@ -110,7 +112,7 @@ export async function pickReceiptPhoto(
   });
 
   if (!processed.base64) {
-    throw new Error('Não consegui preparar a foto. Tente outra.');
+    throw new Error(tNow().errors.photoPrepare);
   }
   return { base64: processed.base64, uri: processed.uri };
 }
@@ -164,7 +166,7 @@ export async function uploadReceipt(
   if (error || !data) {
     // Não deixa lixo no bucket se o insert falhou.
     await supabase.storage.from('receipts').remove([path]);
-    throw new Error(error?.message ?? 'Não consegui registrar a notinha.');
+    throw new Error(error?.message ?? tNow().errors.registerReceipt);
   }
   return data as Receipt;
 }
@@ -184,7 +186,7 @@ export async function createQrReceipt(userId: string, qrUrl: string): Promise<Re
     .select()
     .single();
 
-  if (error || !data) throw new Error(error?.message ?? 'Não consegui registrar a notinha.');
+  if (error || !data) throw new Error(error?.message ?? tNow().errors.registerReceipt);
   return data as Receipt;
 }
 
@@ -200,7 +202,8 @@ export function parseReceipt(receiptId: string): Promise<ParseResult> {
 
 async function invokeParser(fn: 'parse-receipt' | 'parse-nfce', receiptId: string): Promise<ParseResult> {
   const { data, error } = await supabase.functions.invoke<ParseResult>(fn, {
-    body: { receipt_id: receiptId },
+    // `lang`: a função devolve mensagens de erro prontas para o usuário ler.
+    body: { receipt_id: receiptId, lang: getActiveLang() },
   });
 
   if (error) {
@@ -216,9 +219,9 @@ async function invokeParser(fn: 'parse-receipt' | 'parse-nfce', receiptId: strin
     } catch {
       /* fica com a mensagem genérica */
     }
-    throw new Error(message ?? 'Não consegui ler a notinha.');
+    throw new Error(message ?? tNow().errors.readReceipt);
   }
-  if (!data) throw new Error('Não consegui ler a notinha.');
+  if (!data) throw new Error(tNow().errors.readReceipt);
   return data;
 }
 

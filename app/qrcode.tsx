@@ -5,6 +5,7 @@ import React, { useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PressableScale } from '../src/components/PressableScale';
+import { useT } from '../src/i18n';
 import { setPendingScan } from '../src/lib/receipts';
 import { useTheme } from '../src/theme/ThemeContext';
 import { Text } from '../src/theme/typography';
@@ -27,6 +28,7 @@ function pareceNfce(valor: string): boolean {
  */
 export default function QrCodeScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [erro, setErro] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export default function QrCodeScreen() {
     if (jaLeu.current) return;
 
     if (!pareceNfce(valor)) {
-      setErro('Esse QR Code não é de uma nota fiscal. Aponte para o QR do cupom.');
+      setErro(t.qrcode.notAReceipt);
       return;
     }
 
@@ -53,17 +55,19 @@ export default function QrCodeScreen() {
   if (!permission.granted) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header onClose={() => router.back()} tint={colors.text} title="Ler QR do cupom" />
+        <Header onClose={() => router.back()} tint={colors.text} title={t.qrcode.title} />
         <View style={styles.center}>
           <MaterialCommunityIcons name="camera-off-outline" size={48} color={colors.textMuted} />
           <Text style={[styles.aviso, { color: colors.text }]}>
-            Preciso da câmera para ler o QR Code do cupom.
+            {t.qrcode.needCamera}
           </Text>
           <PressableScale
             onPress={requestPermission}
             style={[styles.botao, { backgroundColor: colors.primary }]}
           >
-            <Text style={[styles.botaoTexto, { color: colors.onPrimary }]}>Liberar câmera</Text>
+            <Text style={[styles.botaoTexto, { color: colors.onPrimary }]}>
+              {t.qrcode.allowCamera}
+            </Text>
           </PressableScale>
         </View>
       </SafeAreaView>
@@ -72,14 +76,14 @@ export default function QrCodeScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: '#0B1120' }]}>
-      <Header onClose={() => router.back()} tint="#FFFFFF" title="Ler QR do cupom" />
+      <Header onClose={() => router.back()} tint="#FFFFFF" title={t.qrcode.title} />
 
       <View style={styles.cameraWrap}>
         {/* Na web o CameraView não existe; lá o caminho é colar o link. */}
         {Platform.OS === 'web' ? (
           <View style={styles.center}>
             <Text style={styles.dica}>
-              No navegador, use o campo "colar link do QR" na tela de lançamento.
+              {t.qrcode.webHint}
             </Text>
           </View>
         ) : (
@@ -99,10 +103,10 @@ export default function QrCodeScreen() {
 
       <View style={styles.rodape}>
         <Text style={styles.dica}>
-          {erro ?? 'Aponte para o QR Code impresso no rodapé do cupom fiscal.'}
+          {erro ?? t.qrcode.aim}
         </Text>
         <Text style={styles.dicaFraca}>
-          Os itens vêm direto da SEFAZ — sem foto, sem erro de leitura.
+          {t.qrcode.aimSub}
         </Text>
       </View>
     </SafeAreaView>

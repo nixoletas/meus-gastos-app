@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { useT } from '../i18n';
 import { hexWithAlpha } from './CategoryIcon';
 import { useTheme } from '../theme/ThemeContext';
 import { Text } from '../theme/typography';
@@ -40,8 +41,8 @@ export function ConfirmDialog({
   visible,
   title,
   message,
-  confirmLabel = 'Excluir',
-  cancelLabel = 'Cancelar',
+  confirmLabel,
+  cancelLabel,
   tone = 'danger',
   icon = 'trash-can-outline',
   preview,
@@ -50,6 +51,9 @@ export function ConfirmDialog({
   onCancel,
 }: Props) {
   const { colors } = useTheme();
+  const t = useT();
+  const confirmText = confirmLabel ?? t.confirm.defaultConfirm;
+  const cancelText = cancelLabel ?? t.confirm.defaultCancel;
   const accent = tone === 'danger' ? colors.danger : colors.primary;
   const accentSoft = tone === 'danger' ? colors.dangerSoft : colors.primarySoft;
 
@@ -119,7 +123,7 @@ export function ConfirmDialog({
               disabled={busy}
               style={[styles.button, { backgroundColor: colors.surface, opacity: busy ? 0.5 : 1 }]}
             >
-              <Text style={[styles.buttonText, { color: colors.text }]}>{cancelLabel}</Text>
+              <Text style={[styles.buttonText, { color: colors.text }]}>{cancelText}</Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}
@@ -129,7 +133,7 @@ export function ConfirmDialog({
               {busy ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>{confirmLabel}</Text>
+                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>{confirmText}</Text>
               )}
             </Pressable>
           </View>

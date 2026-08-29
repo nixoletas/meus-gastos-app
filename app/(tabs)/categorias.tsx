@@ -18,11 +18,13 @@ import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useData } from '../../src/context/DataContext';
 import { normalize } from '../../src/data/icons';
+import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { CategoryWithSubs } from '../../src/types';
 
 export default function CategoriasScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { categoriesWithSubs } = useData();
@@ -79,7 +81,9 @@ export default function CategoriasScreen() {
           style={[styles.subChip, { borderColor: colors.border, borderWidth: 1.5 }]}
         >
           <MaterialCommunityIcons name="plus" size={15} color={colors.textMuted} />
-          <Text style={[styles.subChipText, { color: colors.textMuted }]}>Adicionar</Text>
+          <Text style={[styles.subChipText, { color: colors.textMuted }]}>
+            {t.categories.add}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -90,7 +94,7 @@ export default function CategoriasScreen() {
       {/* Cabeçalho fixo (fora do FlatList) para o teclado não fechar ao digitar. */}
       <View style={styles.fixedHeader}>
         <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: colors.text }]}>Categorias</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t.categories.title}</Text>
           <PressableScale
             onPress={() => {
               router.push('/categoria');
@@ -98,7 +102,9 @@ export default function CategoriasScreen() {
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
           >
             <MaterialCommunityIcons name="plus" size={20} color={colors.onPrimary} />
-            <Text style={[styles.addBtnText, { color: colors.onPrimary }]}>Nova</Text>
+            <Text style={[styles.addBtnText, { color: colors.onPrimary }]}>
+              {t.categories.new}
+            </Text>
           </PressableScale>
         </View>
 
@@ -106,10 +112,8 @@ export default function CategoriasScreen() {
           <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
           <TextInput
             value={query}
-            onChangeText={(t) => {
-              setQuery(t);
-            }}
-            placeholder="Buscar categoria ou subcategoria"
+            onChangeText={setQuery}
+            placeholder={t.categories.searchPlaceholder}
             placeholderTextColor={colors.textMuted}
             style={[styles.searchInput, { color: colors.text }]}
             autoCorrect={false}
@@ -145,16 +149,16 @@ export default function CategoriasScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.suggestTitle, { color: colors.text }]}>
-                  Criar “{query.trim()}”
+                  {t.categories.createNamed(query.trim())}
                 </Text>
                 <Text style={[styles.suggestText, { color: colors.textMuted }]}>
-                  Nenhuma categoria encontrada. Toque para criar uma nova com esse nome.
+                  {t.categories.createHint}
                 </Text>
               </View>
             </PressableScale>
           ) : (
             <Text style={[styles.empty, { color: colors.textMuted }]}>
-              Nenhuma categoria ainda.
+              {t.categories.empty}
             </Text>
           )
         }

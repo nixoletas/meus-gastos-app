@@ -6,7 +6,8 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { DEFAULT_CATEGORIES } from '../data/defaultCategories';
+import { DEFAULT_CATEGORIES, defaultName } from '../data/defaultCategories';
+import { getActiveLang } from '../i18n/active';
 import { AppIconName } from '../data/icons';
 import { supabase } from '../lib/supabase';
 import { Budget, Category, CategoryWithSubs, DraftItem, Expense } from '../types';
@@ -101,10 +102,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const seedDefaults = useCallback(async (uid: string): Promise<Category[]> => {
     setSeeding(true);
     try {
+      // Nome no idioma em que a conta está sendo criada. Depois disso vira
+      // dado do usuário: trocar de idioma não renomeia categoria existente.
+      const lang = getActiveLang();
+
       // 1) Insere as categorias-mãe.
       const parentsPayload = DEFAULT_CATEGORIES.map((c) => ({
         user_id: uid,
-        name: c.name,
+        name: defaultName(c, lang),
         icon: c.icon,
         color: c.color,
         parent_id: null,
@@ -118,12 +123,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // 2) Insere as subcategorias ligadas a cada mãe.
       const subsPayload: Omit<Category, 'id' | 'created_at'>[] = [];
       DEFAULT_CATEGORIES.forEach((def) => {
-        const parent = parents.find((p) => p.name === def.name);
+        const parent = parents.find((p) => p.name === defaultName(def, lang));
         if (!parent) return;
         def.subcategories.forEach((sub) => {
           subsPayload.push({
             user_id: uid,
-            name: sub.name,
+            name: defaultName(sub, lang),
             icon: sub.icon,
             color: parent.color,
             parent_id: parent.id,

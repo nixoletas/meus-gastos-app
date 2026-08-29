@@ -1,6 +1,7 @@
 // Geração do relatório Excel "lindo" com ExcelJS.
 // Retorna os bytes do arquivo .xlsx prontos para anexar no e-mail / baixar.
 import ExcelJS from 'npm:exceljs@4.4.0';
+import { Lang, t } from '../_shared/i18n.ts';
 
 export type ReportExpense = {
   occurred_at: string; // YYYY-MM-DD
@@ -26,6 +27,7 @@ export type ReportItem = {
 export type ReportInput = {
   periodLabel: string; // ex.: "Julho de 2026" ou "2026"
   periodKind: 'month' | 'year';
+  lang: Lang;
   userName: string;
   expenses: ReportExpense[];
   /** Itens lidos das notinhas. Vazio quando ninguém anexou nota no período. */
@@ -61,22 +63,21 @@ const BORDER = 'FFE2E8F0';
 
 const MONEY_FMT = '"R$" #,##0.00';
 const PCT_FMT = '0.0"%"';
-const MESES = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-];
-
 function thinBorder(color = BORDER) {
   const side = { style: 'thin' as const, color: { argb: color } };
   return { top: side, left: side, bottom: side, right: side };
 }
 
-function formatDayBr(iso: string): string {
+/** Data por extenso curta: 24/08/2026 em pt-BR, 08/24/2026 em inglês. */
+function formatDay(iso: string, lang: Lang): string {
   const [y, m, d] = iso.split('T')[0].split('-').map(Number);
-  return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+  const dia = String(d).padStart(2, '0');
+  const mes = String(m).padStart(2, '0');
+  return lang === 'en' ? `${mes}/${dia}/${y}` : `${dia}/${mes}/${y}`;
 }
 
 export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
+  const dict = t(input.lang).report;
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Meus Gastos';
   wb.created = new Date();
@@ -102,7 +103,7 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   // ────────────────────────────────────────────────────────────────
   // Aba 1 — Resumo
   // ────────────────────────────────────────────────────────────────
-  const resumo = wb.addWorksheet('Resumo', {
+  const resumo = wb.addWorksheet(dict.sheetSummary, {
     views: [{ showGridLines: false }],
     properties: { defaultRowHeight: 20 },
   });
@@ -139,22 +140,25 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   const subtitle = resumo.getCell('B4');
   subtitle.value =
     input.periodKind === 'year'
-      ? `Relatório anual · ${input.periodLabel}`
-      : `Relatório mensal · ${input.periodLabel}`;
+      ? dict.subtitleYear(input.periodLabel)
+      : dict.subtitleMonth(input.periodLabel);
   subtitle.font = { size: 13, bold: true, color: { argb: BRAND_DARK } };
   subtitle.alignment = { horizontal: 'left', indent: 1 };
 
   resumo.mergeCells('B5:E5');
   const who = resumo.getCell('B5');
-  who.value = `Preparado para ${input.userName} · gerado em ${formatDayBr(new Date().toISOString())}`;
+  who.value = dict.preparedFor(
+    input.userName,
+    formatDay(new Date().toISOString(), input.lang)
+  );
   who.font = { size: 10, italic: true, color: { argb: MUTED } };
   who.alignment = { horizontal: 'left', indent: 1 };
 
   // Cartões de destaque (Total gasto / Nº de lançamentos / Ticket médio)
   const cards: [string, number, string][] = [
-    ['Total gasto', total, MONEY_FMT],
-    ['Lançamentos', count, '0'],
-    ['Ticket médio', count ? total / count : 0, MONEY_FMT],
+    [dict.cardTotal, total, MONEY_FMT],
+    [dict.cardCount, count, '0'],
+    [dict.cardAverage, count ? total / count : 0, MONEY_FMT],
   ];
   let cardCol = 2; // B
   const cardRowLabel = 7;
@@ -183,10 +187,10 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   const headerRowIdx = 11;
   resumo.mergeCells(`B${headerRowIdx - 1}:E${headerRowIdx - 1}`);
   const secTitle = resumo.getCell(`B${headerRowIdx - 1}`);
-  secTitle.value = 'Gastos por categoria';
+  secTitle.value = dict.byCategory;
   secTitle.font = { size: 14, bold: true, color: { argb: INK } };
 
-  const headers = ['Categoria', 'Total', '% do total', 'Participação'];
+  const headers = [dict.colCategory, dict.colTotal, dict.colPercent, dict.colShare];
   headers.forEach((h, i) => {
     const cell = resumo.getCell(headerRowIdx, 2 + i);
     cell.value = h;
@@ -237,7 +241,7 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   // Linha de total
   const totalRow = headerRowIdx + 1 + catRows.length;
   const tl = resumo.getCell(totalRow, 2);
-  tl.value = 'TOTAL';
+  tl.value = dict.totalRow;
   tl.font = { bold: true, color: { argb: WHITE } };
   tl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_DARK } };
   tl.alignment = { horizontal: 'left', indent: 1 };
@@ -260,10 +264,10 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
     const inicio = totalRow + 3;
     resumo.mergeCells(`B${inicio}:E${inicio}`);
     const tituloItens = resumo.getCell(`B${inicio}`);
-    tituloItens.value = 'Top produtos (pelas notinhas)';
+    tituloItens.value = dict.topProducts;
     tituloItens.font = { size: 14, bold: true, color: { argb: INK } };
 
-    const cabecalho = ['Produto', 'Total', 'Vezes', ''];
+    const cabecalho = [dict.colProduct, dict.colTotal, dict.colTimes, ''];
     cabecalho.forEach((h, i) => {
       const cell = resumo.getCell(inicio + 1, 2 + i);
       cell.value = h;
@@ -310,13 +314,15 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   // ────────────────────────────────────────────────────────────────
   // Aba 2 — Lançamentos (detalhe)
   // ────────────────────────────────────────────────────────────────
-  const det = wb.addWorksheet('Lançamentos', { views: [{ showGridLines: false, state: 'frozen', ySplit: 1 }] });
+  const det = wb.addWorksheet(dict.sheetEntries, {
+    views: [{ showGridLines: false, state: 'frozen', ySplit: 1 }],
+  });
   det.columns = [
-    { header: 'Data', key: 'data', width: 14 },
-    { header: 'Categoria', key: 'cat', width: 24 },
-    { header: 'Subcategoria', key: 'sub', width: 22 },
-    { header: 'Observação', key: 'note', width: 40 },
-    { header: 'Valor', key: 'valor', width: 16 },
+    { header: dict.colDate, key: 'data', width: 14 },
+    { header: dict.colCategory, key: 'cat', width: 24 },
+    { header: dict.colSubcategory, key: 'sub', width: 22 },
+    { header: dict.colNote, key: 'note', width: 40 },
+    { header: dict.colAmount, key: 'valor', width: 16 },
   ];
   const detHeader = det.getRow(1);
   detHeader.height = 24;
@@ -332,7 +338,7 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   );
   sorted.forEach((e, i) => {
     const row = det.addRow({
-      data: formatDayBr(e.occurred_at),
+      data: formatDay(e.occurred_at, input.lang),
       cat: e.category,
       sub: e.subcategory,
       note: e.note ?? '',
@@ -350,7 +356,7 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
 
   // Rodapé com total na aba de detalhe.
   const footIdx = det.rowCount + 1;
-  det.getCell(footIdx, 4).value = 'TOTAL';
+  det.getCell(footIdx, 4).value = dict.totalRow;
   det.getCell(footIdx, 4).font = { bold: true, color: { argb: WHITE } };
   det.getCell(footIdx, 4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_DARK } };
   det.getCell(footIdx, 4).alignment = { horizontal: 'right', indent: 1 };
@@ -368,18 +374,18 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   // todo gasto tem nota anexada.
   // ────────────────────────────────────────────────────────────────
   if (items.length > 0) {
-    const aba = wb.addWorksheet('Itens', {
+    const aba = wb.addWorksheet(dict.sheetItems, {
       views: [{ showGridLines: false, state: 'frozen', ySplit: 1 }],
     });
     aba.columns = [
-      { header: 'Data', key: 'data', width: 14 },
-      { header: 'Estabelecimento', key: 'mercado', width: 28 },
-      { header: 'Item', key: 'item', width: 38 },
-      { header: 'Qtd.', key: 'qtd', width: 10 },
-      { header: 'Un.', key: 'un', width: 8 },
-      { header: 'Vl. unit.', key: 'unit', width: 14 },
-      { header: 'Total', key: 'total', width: 14 },
-      { header: 'Categoria', key: 'cat', width: 22 },
+      { header: dict.colDate, key: 'data', width: 14 },
+      { header: dict.colMerchant, key: 'mercado', width: 28 },
+      { header: dict.colItem, key: 'item', width: 38 },
+      { header: dict.colQty, key: 'qtd', width: 10 },
+      { header: dict.colUnit, key: 'un', width: 8 },
+      { header: dict.colUnitPrice, key: 'unit', width: 14 },
+      { header: dict.colTotal, key: 'total', width: 14 },
+      { header: dict.colCategory, key: 'cat', width: 22 },
     ];
 
     const cabecalho = aba.getRow(1);
@@ -397,7 +403,7 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
 
     ordenados.forEach((item, i) => {
       const row = aba.addRow({
-        data: item.occurred_at ? formatDayBr(item.occurred_at) : '',
+        data: item.occurred_at ? formatDay(item.occurred_at, input.lang) : '',
         mercado: item.merchant,
         item: item.description,
         qtd: item.quantity,
@@ -423,7 +429,7 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
     });
 
     const rodape = aba.rowCount + 1;
-    aba.getCell(rodape, 6).value = 'TOTAL EM ITENS';
+    aba.getCell(rodape, 6).value = dict.itemsTotalRow;
     aba.getCell(rodape, 7).value = itensTotal;
     aba.getCell(rodape, 7).numFmt = MONEY_FMT;
     for (const col of [6, 7]) {
@@ -438,8 +444,14 @@ export async function buildReportXlsx(input: ReportInput): Promise<Uint8Array> {
   return new Uint8Array(buffer as ArrayBuffer);
 }
 
-/** Rótulo do período em pt-BR. */
-export function makePeriodLabel(kind: 'month' | 'year', year: number, month?: number): string {
+/** Rótulo do período no idioma pedido. */
+export function makePeriodLabel(
+  kind: 'month' | 'year',
+  year: number,
+  month: number | undefined,
+  lang: Lang
+): string {
   if (kind === 'year') return String(year);
-  return `${MESES[(month ?? 1) - 1]} de ${year}`;
+  const dict = t(lang).report;
+  return dict.periodLabel(dict.months[(month ?? 1) - 1], year);
 }

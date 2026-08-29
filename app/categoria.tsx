@@ -22,10 +22,12 @@ import { IconPicker } from '../src/components/IconPicker';
 import { PressableScale } from '../src/components/PressableScale';
 import { useData } from '../src/context/DataContext';
 import { AppIconName } from '../src/data/icons';
+import { useT } from '../src/i18n';
 import { useTheme } from '../src/theme/ThemeContext';
 
 export default function CategoriaScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; parentId?: string; name?: string }>();
   const { categories, addCategory, updateCategory, deleteCategory } = useData();
@@ -60,11 +62,11 @@ export default function CategoriaScreen() {
 
   const title = editing
     ? isSub
-      ? 'Editar subcategoria'
-      : 'Editar categoria'
+      ? t.categoryForm.editSub
+      : t.categoryForm.editCat
     : isSub
-      ? 'Nova subcategoria'
-      : 'Nova categoria';
+      ? t.categoryForm.newSub
+      : t.categoryForm.newCat;
 
   const canSave = name.trim().length > 0 && !saving;
 
@@ -124,25 +126,26 @@ export default function CategoriaScreen() {
           <Pressable onPress={() => setPickerOpen(true)} style={styles.changeIcon}>
             <MaterialCommunityIcons name="pencil" size={16} color={colors.primary} />
             <Text style={[styles.changeIconText, { color: colors.primary }]}>
-              Trocar ícone
+              {t.categoryForm.changeIcon}
             </Text>
           </Pressable>
         </View>
 
         {isSub && parent && (
           <Text style={[styles.parentHint, { color: colors.textMuted }]}>
-            Subcategoria de <Text style={{ fontWeight: '700' }}>{parent.name}</Text>
+            {t.categoryForm.childOf}{' '}
+            <Text style={{ fontWeight: '700' }}>{parent.name}</Text>
           </Text>
         )}
 
         {/* Nome */}
-        <Text style={[styles.label, { color: colors.text }]}>Nome</Text>
+        <Text style={[styles.label, { color: colors.text }]}>{t.categoryForm.name}</Text>
         <TextInput
           value={name}
-          onChangeText={(t) => {
-            setName(t);
-          }}
-          placeholder={isSub ? 'Ex.: Mercado' : 'Ex.: Alimentação'}
+          onChangeText={setName}
+          placeholder={
+            isSub ? t.categoryForm.subNamePlaceholder : t.categoryForm.catNamePlaceholder
+          }
           placeholderTextColor={colors.textMuted}
           style={[
             styles.input,
@@ -154,7 +157,7 @@ export default function CategoriaScreen() {
         {/* Cor (apenas para categoria-mãe) */}
         {!isSub && (
           <>
-            <Text style={[styles.label, { color: colors.text }]}>Cor</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t.categoryForm.color}</Text>
             <ColorPicker selected={color} onSelect={setColor} />
           </>
         )}
@@ -170,7 +173,7 @@ export default function CategoriaScreen() {
           <Text
             style={[styles.saveText, { color: canSave ? colors.onPrimary : colors.textMuted }]}
           >
-            Salvar
+            {t.common.save}
           </Text>
         </PressableScale>
       </View>
@@ -187,14 +190,17 @@ export default function CategoriaScreen() {
       {/* Confirmação de exclusão */}
       <ConfirmDialog
         visible={confirmOpen}
-        title={`Excluir ${isSub ? 'subcategoria' : 'categoria'} “${editing?.name ?? name}”?`}
+        title={t.categoryForm.deleteTitle(
+          isSub ? t.categoryForm.kindSub : t.categoryForm.kindCat,
+          editing?.name ?? name
+        )}
         message={`${
           isSub
-            ? 'Os gastos lançados nela continuam, mas ficam sem subcategoria.'
+            ? t.categoryForm.deleteSubMessage
             : subCount > 0
-              ? `As ${subCount} subcategorias também serão removidas. Os gastos continuam, mas ficam sem categoria.`
-              : 'Os gastos lançados nela continuam, mas ficam sem categoria.'
-        } Esta ação não pode ser desfeita.`}
+              ? t.categoryForm.deleteCatWithSubs(subCount)
+              : t.categoryForm.deleteCatMessage
+        } ${t.categoryForm.undoWarning}`}
         preview={
           <CategoryIcon
             icon={editing?.icon ?? icon}

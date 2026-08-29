@@ -11,6 +11,7 @@
 // propósito e a tela oferece o outro caminho: fotografar a nota.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { pickLang, t } from '../_shared/i18n.ts';
 import { checkSum, normalizeParsed } from '../_shared/receipt.ts';
 import { chaveDaUrl, chaveValida, dadosDaChave, portalPermitido } from './chave.ts';
 import { lerPaginaNfce } from './scrape.ts';
@@ -21,7 +22,11 @@ const DAILY_LIMIT = Number(Deno.env.get('NFCE_DAILY_LIMIT') ?? '200');
 /** Portal de SEFAZ lento é comum; parar de esperar é melhor que travar a tela. */
 const FETCH_TIMEOUT_MS = 15000;
 
-type Body = { receipt_id?: string };
+type Body = {
+  receipt_id?: string;
+  /** Idioma das mensagens devolvidas; 'pt-BR' quando não vem. */
+  lang?: string;
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -34,12 +39,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  // O idioma só chega no corpo; até lê-lo, as respostas saem no padrão.
+  let dict = t(pickLang(undefined));
   if (req.method !== 'POST') {
-    return json({ error: 'Método não permitido' }, 405);
+    return json({ error: dict.http.methodNotAllowed }, 405);
   }
 
   const authHeader = req.headers.get('Authorization') ?? '';
-  if (!authHeader) return json({ error: 'Não autenticado' }, 401);
+  if (!authHeader) return json({ error: dict.http.notAuthenticated }, 401);
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -48,11 +55,12 @@ Deno.serve(async (req) => {
   );
 
   const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr || !userData.user) return json({ error: 'Sessão inválida' }, 401);
+  if (userErr || !userData.user) return json({ error: dict.http.invalidSession }, 401);
 
   const body = (await req.json().catch(() => ({}))) as Body;
+  dict = t(pickLang(body.lang));
   const receiptId = body.receipt_id;
-  if (!receiptId) return json({ error: 'receipt_id é obrigatório' }, 400);
+  if (!receiptId) return json({ error: dict.http.receiptIdRequired }, 400);
 
   const { data: receipt, error: receiptErr } = await supabase
     .from('receipts')
@@ -61,7 +69,7 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   if (receiptErr) return json({ error: receiptErr.message }, 500);
-  if (!receipt) return json({ error: 'Notinha não encontrada' }, 404);
+  if (!receipt) return json({ error: dict.http.receiptNotFound }, 404);
 
   const fail = async (message: string, status = 400) => {
     await supabase
@@ -72,15 +80,15 @@ Deno.serve(async (req) => {
   };
 
   const qrUrl: string | null = receipt.qr_url;
-  if (!qrUrl) return await fail('Essa notinha não tem QR Code.', 400);
+  if (!qrUrl) return await fail(dict.nfce.noQr, 400);
 
   if (!portalPermitido(qrUrl)) {
-    return await fail('Esse QR Code não aponta para um portal da SEFAZ.', 400);
+    return await fail(dict.nfce.notSefaz, 400);
   }
 
   const chave = chaveDaUrl(qrUrl);
   if (!chave || !chaveValida(chave)) {
-    return await fail('Não reconheci a chave dessa nota. Tente ler o QR de novo.', 422);
+    return await fail(dict.nfce.badKey, 422);
   }
 
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -89,7 +97,7 @@ Deno.serve(async (req) => {
     .select('id', { count: 'exact', head: true })
     .gte('created_at', dayAgo);
   if ((count ?? 0) > DAILY_LIMIT) {
-    return await fail('Muitas notinhas nas últimas 24 horas. Tente amanhã.', 429);
+    return await fail(dict.nfce.dailyLimit, 429);
   }
 
   // A chave é única por nota no país inteiro: se ela já virou gasto, avisamos
@@ -143,7 +151,7 @@ Deno.serve(async (req) => {
       // Diagnóstico só no log: a página pode conter CPF do consumidor.
       console.error('nfce sem itens', dadosDaChave(chave).uf, html.length);
       return await fail(
-        'Consegui abrir a nota, mas não entendi a lista de itens desse estado. Fotografe a nota que eu leio pela imagem.',
+        dict.nfce.unknownLayout,
         422
       );
     }
@@ -175,8 +183,8 @@ Deno.serve(async (req) => {
     console.error('parse-nfce', err);
     return await fail(
       abortada
-        ? 'O portal da SEFAZ demorou demais para responder. Tente de novo.'
-        : 'Não consegui consultar essa nota. Fotografe a notinha que eu leio pela imagem.',
+        ? dict.nfce.timeout
+        : dict.nfce.failed,
       502
     );
   }

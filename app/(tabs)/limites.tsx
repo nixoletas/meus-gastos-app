@@ -20,6 +20,7 @@ import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
 import { ConfirmDialog } from '../../src/components/ConfirmDialog';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useData } from '../../src/context/DataContext';
+import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { evaluateBudgets } from '../../src/utils/analytics';
 import { formatBRL, maskCurrencyInput, rawToReais } from '../../src/utils/currency';
@@ -27,6 +28,7 @@ import { Period } from '../../src/utils/date';
 
 export default function LimitesScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { budgets, expenses, categories, categoriesWithSubs, setBudget, deleteBudget } =
     useData();
@@ -81,10 +83,9 @@ export default function LimitesScreen() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, { color: colors.text }]}>Meus Limites</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{t.limits.title}</Text>
       <Text style={[styles.intro, { color: colors.textMuted }]}>
-        Defina um teto de gastos (geral ou por categoria) e o app avisa quando você
-        se aproximar (80%) ou ultrapassar o limite.
+        {t.limits.intro}
       </Text>
 
       {/* Limites existentes */}
@@ -109,18 +110,21 @@ export default function LimitesScreen() {
                   )}
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.budgetName, { color: colors.text }]}>
-                      {a.category?.name ?? 'Limite geral'}
+                      {a.category?.name ?? t.common.generalLimit}
                     </Text>
                     <Text style={[styles.budgetSub, { color: colors.textMuted }]}>
-                      {a.budget.period === 'month' ? 'Mensal' : 'Anual'} ·{' '}
-                      {formatBRL(a.spent)} de {formatBRL(a.budget.limit_amount)}
+                      {t.limits.budgetSub(
+                        a.budget.period === 'month' ? t.limits.monthly : t.limits.yearly,
+                        formatBRL(a.spent),
+                        formatBRL(a.budget.limit_amount)
+                      )}
                     </Text>
                   </View>
                   <Pressable
                     onPress={() =>
                       setRemoving({
                         id: a.budget.id,
-                        label: a.category?.name ?? 'Limite geral',
+                        label: a.category?.name ?? t.common.generalLimit,
                       })
                     }
                     hitSlop={10}
@@ -138,12 +142,14 @@ export default function LimitesScreen() {
                 </View>
                 <View style={styles.percentRow}>
                   <Text style={[styles.percent, { color }]}>
-                    {Math.round(a.ratio * 100)}% utilizado
+                    {t.limits.usedPercent(Math.round(a.ratio * 100))}
                   </Text>
                   <Text style={[styles.remaining, { color: colors.textMuted }]}>
                     {a.spent >= a.budget.limit_amount
-                      ? `Ultrapassou ${formatBRL(a.spent - a.budget.limit_amount)}`
-                      : `Faltam ${formatBRL(a.budget.limit_amount - a.spent)}`}
+                      ? t.limits.overBy(formatBRL(a.spent - a.budget.limit_amount))
+                      : t.limits.remaining(
+                          formatBRL(a.budget.limit_amount - a.spent)
+                        )}
                   </Text>
                 </View>
               </View>
@@ -153,7 +159,7 @@ export default function LimitesScreen() {
       )}
 
       {/* Novo limite */}
-      <Text style={[styles.formTitle, { color: colors.text }]}>Novo limite</Text>
+      <Text style={[styles.formTitle, { color: colors.text }]}>{t.limits.newLimit}</Text>
       <View style={[styles.formCard, { backgroundColor: colors.card }]}>
         {/* Período */}
         <View style={[styles.segment, { backgroundColor: colors.surface }]}>
@@ -168,7 +174,7 @@ export default function LimitesScreen() {
                 style={[styles.segmentBtn, active && { backgroundColor: colors.card }]}
               >
                 <Text style={{ color: active ? colors.primary : colors.textMuted, fontWeight: '700' }}>
-                  {p === 'month' ? 'Mensal' : 'Anual'}
+                  {p === 'month' ? t.limits.monthly : t.limits.yearly}
                 </Text>
               </Pressable>
             );
@@ -176,7 +182,7 @@ export default function LimitesScreen() {
         </View>
 
         {/* Categoria (geral + categorias-mãe) */}
-        <Text style={[styles.fieldLabel, { color: colors.text }]}>Aplicar a</Text>
+        <Text style={[styles.fieldLabel, { color: colors.text }]}>{t.limits.applyTo}</Text>
         <View style={styles.chipsWrap}>
           <Pressable
             onPress={() => {
@@ -191,7 +197,7 @@ export default function LimitesScreen() {
             ]}
           >
             <MaterialCommunityIcons name="earth" size={18} color={colors.primary} />
-            <Text style={[styles.chipText, { color: colors.text }]}>Geral</Text>
+            <Text style={[styles.chipText, { color: colors.text }]}>{t.common.general}</Text>
           </Pressable>
           {categoriesWithSubs.map((cat) => {
             const active = cat.id === categoryId;
@@ -217,18 +223,20 @@ export default function LimitesScreen() {
         </View>
 
         {/* Valor */}
-        <Text style={[styles.fieldLabel, { color: colors.text }]}>Valor do limite</Text>
+        <Text style={[styles.fieldLabel, { color: colors.text }]}>
+          {t.limits.limitAmount}
+        </Text>
         <View style={[styles.amountBox, { backgroundColor: colors.surface }]}>
           <Text style={[styles.currency, { color: colors.textMuted }]}>R$</Text>
           <TextInput
             value={maskCurrencyInput(raw)}
-            onChangeText={(t) => {
-              setRaw(t.replace(/\D/g, '').slice(0, 11));
+            onChangeText={(text) => {
+              setRaw(text.replace(/\D/g, '').slice(0, 11));
             }}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
             keyboardType="number-pad"
             style={[styles.amountInput, { color: colors.text }]}
-            placeholder="0,00"
+            placeholder={t.limits.amountPlaceholder}
             placeholderTextColor={colors.textMuted}
           />
         </View>
@@ -240,7 +248,7 @@ export default function LimitesScreen() {
           style={[styles.saveBtn, { backgroundColor: canSave ? colors.primary : colors.surface }]}
         >
           <Text style={[styles.saveText, { color: canSave ? colors.onPrimary : colors.textMuted }]}>
-            Salvar limite
+            {t.limits.saveLimit}
           </Text>
         </PressableScale>
       </View>
@@ -248,9 +256,10 @@ export default function LimitesScreen() {
 
     <ConfirmDialog
       visible={removing !== null}
-      title={`Remover o limite de “${removing?.label ?? ''}”?`}
-      message="Os gastos continuam registrados; o app só para de avisar quando esse teto for alcançado."
-      confirmLabel="Remover"
+      title={t.limits.removeTitle(removing?.label ?? '')}
+      message={t.limits.removeMessage}
+      confirmLabel={t.common.remove}
+      cancelLabel={t.common.cancel}
       icon="bell-off-outline"
       busy={removingBusy}
       onConfirm={handleRemove}

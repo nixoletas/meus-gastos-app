@@ -1,8 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { Text, TextInput } from '../theme/typography';
+import { getActiveLang } from '../i18n/active';
 import { DraftItem } from '../types';
 import { maskCurrencyInput, rawToReais, reaisToRaw } from '../utils/currency';
 
@@ -15,6 +17,12 @@ type Props = {
   onCancel: () => void;
 };
 
+/** Mostra a quantidade com o separador decimal do idioma ativo. */
+function formatQuantity(value: number): string {
+  const texto = String(value);
+  return getActiveLang() === 'en' ? texto : texto.replace('.', ',');
+}
+
 /** Aceita "1,25" e "1.25" — o teclado decimal do Android manda vírgula. */
 function parseQuantity(text: string): number {
   const parsed = Number.parseFloat(text.replace(',', '.'));
@@ -24,6 +32,7 @@ function parseQuantity(text: string): number {
 /** Edição de uma subcompra: o OCR erra, e corrigir tem que ser rápido. */
 export function ItemEditorModal({ visible, item, onSave, onDelete, onCancel }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('');
@@ -32,7 +41,7 @@ export function ItemEditorModal({ visible, item, onSave, onDelete, onCancel }: P
   useEffect(() => {
     if (!visible) return;
     setDescription(item?.description ?? '');
-    setQuantity(item ? String(item.quantity).replace('.', ',') : '1');
+    setQuantity(item ? formatQuantity(item.quantity) : '1');
     setUnit(item?.unit ?? '');
     setRaw(item && item.total > 0 ? reaisToRaw(item.total) : '');
   }, [visible, item]);
@@ -60,7 +69,7 @@ export function ItemEditorModal({ visible, item, onSave, onDelete, onCancel }: P
         <Pressable onPress={() => {}} style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>
-              {item?.description ? 'Editar item' : 'Novo item'}
+              {item?.description ? t.itemEditor.editTitle : t.itemEditor.newTitle}
             </Text>
             {!!onDelete && (
               <Pressable onPress={onDelete} hitSlop={10}>
@@ -73,11 +82,13 @@ export function ItemEditorModal({ visible, item, onSave, onDelete, onCancel }: P
             )}
           </View>
 
-          <Text style={[styles.label, { color: colors.textMuted }]}>Descrição</Text>
+          <Text style={[styles.label, { color: colors.textMuted }]}>
+            {t.itemEditor.description}
+          </Text>
           <TextInput
             value={description}
             onChangeText={setDescription}
-            placeholder="Ex.: Banana prata"
+            placeholder={t.itemEditor.descriptionPlaceholder}
             placeholderTextColor={colors.textMuted}
             autoFocus={!item?.description}
             style={[
@@ -88,7 +99,9 @@ export function ItemEditorModal({ visible, item, onSave, onDelete, onCancel }: P
 
           <View style={styles.row}>
             <View style={styles.flex}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Quantidade</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>
+                {t.itemEditor.quantity}
+              </Text>
               <TextInput
                 value={quantity}
                 onChangeText={setQuantity}
@@ -100,11 +113,13 @@ export function ItemEditorModal({ visible, item, onSave, onDelete, onCancel }: P
               />
             </View>
             <View style={styles.unitCol}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Unidade</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>
+                {t.itemEditor.unit}
+              </Text>
               <TextInput
                 value={unit}
                 onChangeText={setUnit}
-                placeholder="un"
+                placeholder={t.expenseRow.defaultUnit}
                 placeholderTextColor={colors.textMuted}
                 autoCapitalize="none"
                 style={[
@@ -115,7 +130,7 @@ export function ItemEditorModal({ visible, item, onSave, onDelete, onCancel }: P
             </View>
           </View>
 
-          <Text style={[styles.label, { color: colors.textMuted }]}>Valor</Text>
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t.itemEditor.amount}</Text>
           <View
             style={[
               styles.input,
@@ -137,7 +152,7 @@ export function ItemEditorModal({ visible, item, onSave, onDelete, onCancel }: P
               onPress={onCancel}
               style={[styles.button, { backgroundColor: colors.surface }]}
             >
-              <Text style={[styles.buttonText, { color: colors.text }]}>Cancelar</Text>
+              <Text style={[styles.buttonText, { color: colors.text }]}>{t.common.cancel}</Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
@@ -147,7 +162,7 @@ export function ItemEditorModal({ visible, item, onSave, onDelete, onCancel }: P
                 { backgroundColor: colors.primary, opacity: canSave ? 1 : 0.5 },
               ]}
             >
-              <Text style={[styles.buttonText, { color: colors.onPrimary }]}>Salvar</Text>
+              <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{t.common.save}</Text>
             </Pressable>
           </View>
         </Pressable>

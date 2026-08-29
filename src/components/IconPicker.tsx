@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Text, TextInput } from '../theme/typography';
 import { AppIconName, searchIcons } from '../data/icons';
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { AppIcon } from './AppIcon';
 import { hexWithAlpha } from './CategoryIcon';
@@ -27,6 +28,7 @@ type Props = {
 /** Modal com busca para escolher o ícone de uma categoria. */
 export function IconPicker({ visible, selected, color, onSelect, onClose }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const [query, setQuery] = useState('');
 
   const results = useMemo(() => searchIcons(query), [query]);
@@ -42,7 +44,7 @@ export function IconPicker({ visible, selected, color, onSelect, onClose }: Prop
         <View style={[styles.sheet, { backgroundColor: colors.card }]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>
-              Escolha um ícone
+              {t.iconPicker.title}
             </Text>
             <Pressable onPress={onClose} hitSlop={12}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textMuted} />
@@ -54,7 +56,7 @@ export function IconPicker({ visible, selected, color, onSelect, onClose }: Prop
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Buscar ícone (ex.: comida, carro...)"
+              placeholder={t.iconPicker.searchPlaceholder}
               placeholderTextColor={colors.textMuted}
               style={[styles.searchInput, { color: colors.text }]}
               autoCorrect={false}
@@ -70,7 +72,7 @@ export function IconPicker({ visible, selected, color, onSelect, onClose }: Prop
             columnWrapperStyle={styles.gridRow}
             ListEmptyComponent={
               <Text style={[styles.empty, { color: colors.textMuted }]}>
-                Nenhum ícone encontrado.
+                {t.iconPicker.empty}
               </Text>
             }
             renderItem={({ item }) => {

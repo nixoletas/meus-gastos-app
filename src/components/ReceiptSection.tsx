@@ -8,6 +8,8 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { useT } from '../i18n';
+import { getActiveLang } from '../i18n/active';
 import { newDraftItem, ReceiptSource, sumItems } from '../lib/receipts';
 import { ReceiptPhase } from '../lib/useReceipt';
 import { useTheme } from '../theme/ThemeContext';
@@ -39,14 +41,11 @@ type Props = {
   onOpenPhoto: () => void;
 };
 
-const PAYMENT_LABEL: Record<string, string> = {
-  credito: 'Crédito',
-  debito: 'Débito',
-  pix: 'Pix',
-  dinheiro: 'Dinheiro',
-  vale: 'Vale',
-  outro: 'Outro',
-};
+/** Quantidade com o separador decimal do idioma ativo. */
+function formatQuantity(value: number): string {
+  const texto = String(value);
+  return getActiveLang() === 'en' ? texto : texto.replace('.', ',');
+}
 
 /** Barra cinza que respira enquanto o OCR roda. */
 function SkeletonLine({ width }: { width: number | `${number}%` }) {
@@ -69,15 +68,19 @@ function SkeletonLine({ width }: { width: number | `${number}%` }) {
   );
 }
 
-/** Data/hora da nota em "24/08 às 19:32". */
-function issuedLabel(iso: string | null): string | null {
+/** Data/hora da nota em "24/08 às 19:32" (ou "08/24 at 19:32" em inglês). */
+function issuedLabel(
+  iso: string | null,
+  join: (date: string, time: string) => string
+): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)} às ${pad(date.getHours())}:${pad(
-    date.getMinutes()
-  )}`;
+  const dia = pad(date.getDate());
+  const mes = pad(date.getMonth() + 1);
+  const dataCurta = getActiveLang() === 'en' ? `${mes}/${dia}` : `${dia}/${mes}`;
+  return join(dataCurta, `${pad(date.getHours())}:${pad(date.getMinutes())}`);
 }
 
 /**
@@ -104,14 +107,19 @@ export function ReceiptSection({
   onOpenPhoto,
 }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const [editing, setEditing] = useState<{ item: DraftItem; isNew: boolean } | null>(null);
 
   const total = sumItems(items);
   const busy = phase === 'uploading' || phase === 'reading';
   const meta = [
     receipt?.merchant,
-    issuedLabel(receipt?.issued_at ?? null),
-    receipt?.payment_method ? PAYMENT_LABEL[receipt.payment_method] ?? null : null,
+    issuedLabel(receipt?.issued_at ?? null, t.receiptSection.issuedAt),
+    receipt?.payment_method
+      ? t.receiptSection.payment[
+          receipt.payment_method as keyof typeof t.receiptSection.payment
+        ] ?? null
+      : null,
   ].filter(Boolean) as string[];
 
   // Diferença de centavos vem de arredondamento da nota, não vale alarde.
@@ -131,10 +139,10 @@ export function ReceiptSection({
   return (
     <View style={styles.wrap}>
       <View style={styles.labelRow}>
-        <Text style={[styles.label, { color: colors.text }]}>Notinha e itens</Text>
+        <Text style={[styles.label, { color: colors.text }]}>{t.receiptSection.label}</Text>
         {items.length > 0 && (
           <Text style={[styles.labelCount, { color: colors.textMuted }]}>
-            {items.length} {items.length === 1 ? 'item' : 'itens'} · {formatBRL(total)}
+            {t.receiptSection.countAndTotal(items.length, formatBRL(total))}
           </Text>
         )}
       </View>
@@ -150,7 +158,7 @@ export function ReceiptSection({
           >
             <MaterialCommunityIcons name="qrcode-scan" size={22} color={colors.onPrimary} />
             <Text style={[styles.attachText, { color: colors.onPrimary }]}>
-              Ler QR do cupom
+              {t.receiptSection.scanQr}
             </Text>
           </PressableScale>
           <View style={styles.attachRow}>
@@ -159,14 +167,18 @@ export function ReceiptSection({
               style={[styles.attachBtn, { backgroundColor: colors.primarySoft }]}
             >
               <MaterialCommunityIcons name="camera-outline" size={20} color={colors.primary} />
-              <Text style={[styles.attachText, { color: colors.primary }]}>Fotografar</Text>
+              <Text style={[styles.attachText, { color: colors.primary }]}>
+                {t.receiptSection.takePhoto}
+              </Text>
             </PressableScale>
             <PressableScale
               onPress={() => onAttach('library')}
               style={[styles.attachBtn, { backgroundColor: colors.surface }]}
             >
               <MaterialCommunityIcons name="image-outline" size={20} color={colors.text} />
-              <Text style={[styles.attachText, { color: colors.text }]}>Da galeria</Text>
+              <Text style={[styles.attachText, { color: colors.text }]}>
+                {t.receiptSection.fromGallery}
+              </Text>
             </PressableScale>
           </View>
         </>
@@ -179,10 +191,10 @@ export function ReceiptSection({
             <ActivityIndicator color={colors.primary} />
             <Text style={[styles.busyText, { color: colors.text }]}>
               {phase === 'uploading'
-                ? 'Enviando a foto…'
+                ? t.receiptSection.uploading
                 : receipt?.source === 'qrcode'
-                  ? 'Consultando a nota na SEFAZ…'
-                  : 'Lendo sua notinha…'}
+                  ? t.receiptSection.queryingSefaz
+                  : t.receiptSection.readingReceipt}
             </Text>
           </View>
           <View style={styles.skeletonGroup}>
@@ -191,7 +203,7 @@ export function ReceiptSection({
             <SkeletonLine width="73%" />
           </View>
           <Text style={[styles.hint, { color: colors.textMuted }]}>
-            Pode continuar preenchendo, eu aviso quando terminar.
+            {t.receiptSection.keepGoing}
           </Text>
         </View>
       )}
@@ -207,14 +219,16 @@ export function ReceiptSection({
           <View style={styles.busyRow}>
             <MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.danger} />
             <Text style={[styles.busyText, { color: colors.text }]}>
-              {error ?? 'Não consegui ler essa foto.'}
+              {error ?? t.receiptSection.readFailed}
             </Text>
           </View>
           <View style={styles.failActions}>
             {!!receipt && (
               <Pressable onPress={onRetry} style={[styles.smallBtn, { backgroundColor: colors.card }]}>
                 <MaterialCommunityIcons name="refresh" size={16} color={colors.text} />
-                <Text style={[styles.smallBtnText, { color: colors.text }]}>Tentar de novo</Text>
+                <Text style={[styles.smallBtnText, { color: colors.text }]}>
+                  {t.common.tryAgain}
+                </Text>
               </Pressable>
             )}
             <Pressable
@@ -223,13 +237,17 @@ export function ReceiptSection({
             >
               <MaterialCommunityIcons name="camera-outline" size={16} color={colors.text} />
               <Text style={[styles.smallBtnText, { color: colors.text }]}>
-                {receipt?.source === 'qrcode' ? 'Fotografar a nota' : 'Outra foto'}
+                {receipt?.source === 'qrcode'
+                  ? t.receiptSection.photographNote
+                  : t.receiptSection.anotherPhoto}
               </Text>
             </Pressable>
             {!!receipt && (
               <Pressable onPress={onRemove} style={[styles.smallBtn, { backgroundColor: colors.card }]}>
                 <MaterialCommunityIcons name="close" size={16} color={colors.danger} />
-                <Text style={[styles.smallBtnText, { color: colors.danger }]}>Remover</Text>
+                <Text style={[styles.smallBtnText, { color: colors.danger }]}>
+                  {t.common.remove}
+                </Text>
               </Pressable>
             )}
           </View>
@@ -255,7 +273,10 @@ export function ReceiptSection({
             )}
             <View style={styles.receiptInfo}>
               <Text style={[styles.merchant, { color: colors.text }]} numberOfLines={1}>
-                {receipt.merchant ?? (receipt.source === 'qrcode' ? 'Nota fiscal' : 'Notinha anexada')}
+                {receipt.merchant ??
+                  (receipt.source === 'qrcode'
+                    ? t.receiptSection.taxReceipt
+                    : t.receiptSection.attachedReceipt)}
               </Text>
               {meta.length > 1 && (
                 <Text style={[styles.hint, { color: colors.textMuted }]} numberOfLines={1}>
@@ -264,7 +285,7 @@ export function ReceiptSection({
               )}
               {receipt.total !== null && (
                 <Text style={[styles.hint, { color: colors.textMuted }]}>
-                  Total na nota: {formatBRL(Number(receipt.total))}
+                  {t.receiptSection.receiptTotal(formatBRL(Number(receipt.total)))}
                 </Text>
               )}
             </View>
@@ -277,7 +298,7 @@ export function ReceiptSection({
             <View style={[styles.warning, { backgroundColor: hexWithAlpha(colors.warning, 0.14) }]}>
               <MaterialCommunityIcons name="content-duplicate" size={16} color={colors.warning} />
               <Text style={[styles.warningText, { color: colors.text }]}>
-                Essa nota fiscal já foi lançada antes. Se não for engano, pode continuar.
+                {t.receiptSection.duplicate}
               </Text>
             </View>
           )}
@@ -286,8 +307,10 @@ export function ReceiptSection({
             <View style={[styles.warning, { backgroundColor: hexWithAlpha(colors.warning, 0.14) }]}>
               <MaterialCommunityIcons name="alert-outline" size={16} color={colors.warning} />
               <Text style={[styles.warningText, { color: colors.text }]}>
-                Os itens somam {formatBRL(total)}, mas a nota diz{' '}
-                {formatBRL(Number(receipt.total ?? 0))}. Confira as linhas.
+                {t.receiptSection.mismatch(
+                  formatBRL(total),
+                  formatBRL(Number(receipt.total ?? 0))
+                )}
               </Text>
             </View>
           )}
@@ -312,7 +335,7 @@ export function ReceiptSection({
                 </Text>
                 {(item.quantity !== 1 || item.unit) && (
                   <Text style={[styles.itemMeta, { color: colors.textMuted }]} numberOfLines={1}>
-                    {String(item.quantity).replace('.', ',')} {item.unit ?? 'un'}
+                    {formatQuantity(item.quantity)} {item.unit ?? t.expenseRow.defaultUnit}
                     {item.unit_price ? ` × ${formatBRL(item.unit_price)}` : ''}
                   </Text>
                 )}
@@ -332,7 +355,9 @@ export function ReceiptSection({
           style={[styles.addItemBtn, { borderColor: colors.border }]}
         >
           <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
-          <Text style={[styles.smallBtnText, { color: colors.primary }]}>Adicionar item</Text>
+          <Text style={[styles.smallBtnText, { color: colors.primary }]}>
+            {t.receiptSection.addItem}
+          </Text>
         </Pressable>
 
         {/* O OCR quase sempre acerta o total; quando o usuário digitou outro
@@ -344,7 +369,7 @@ export function ReceiptSection({
           >
             <MaterialCommunityIcons name="equal" size={16} color={colors.primary} />
             <Text style={[styles.smallBtnText, { color: colors.primary }]}>
-              Usar {formatBRL(total)}
+              {t.receiptSection.useTotal(formatBRL(total))}
             </Text>
           </Pressable>
         )}
@@ -352,8 +377,7 @@ export function ReceiptSection({
 
       {!receipt && items.length === 0 && !busy && (
         <Text style={[styles.hint, { color: colors.textMuted }]}>
-          O QR do cupom traz os itens direto da SEFAZ, sem enviar imagem. Na foto,
-          quem lê é o Google — e ela funciona em qualquer recibo.
+          {t.receiptSection.footerHint}
         </Text>
       )}
 

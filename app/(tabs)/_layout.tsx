@@ -4,10 +4,12 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '../../src/components/PressableScale';
+import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   // No Android, garante uma folga mínima sobre a navbar do sistema mesmo
@@ -36,7 +38,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Home',
+            title: t.tabs.home,
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="home" size={size} color={color} />
             ),
@@ -45,7 +47,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="graficos"
           options={{
-            title: 'Gráficos',
+            title: t.tabs.charts,
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="chart-donut" size={size} color={color} />
             ),
@@ -54,7 +56,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="categorias"
           options={{
-            title: 'Categorias',
+            title: t.tabs.categories,
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="shape" size={size} color={color} />
             ),
@@ -63,7 +65,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="limites"
           options={{
-            title: 'Limites',
+            title: t.tabs.limits,
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="bell-alert" size={size} color={color} />
             ),
@@ -72,7 +74,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="ajustes"
           options={{
-            title: 'Ajustes',
+            title: t.tabs.settings,
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="cog" size={size} color={color} />
             ),

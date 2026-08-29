@@ -16,49 +16,29 @@ import { Mascot } from '../src/components/Mascot';
 import { PIGGY_BRAND } from '../src/components/mascotSvg';
 import { PressableScale } from '../src/components/PressableScale';
 import { useOnboarding } from '../src/context/OnboardingContext';
+import { useT } from '../src/i18n';
 import { useTheme } from '../src/theme/ThemeContext';
 import { Text } from '../src/theme/typography';
 
 const { width } = Dimensions.get('window');
 
-type Slide = {
-  icon?: any;
-  mascot?: boolean;
-  title: string;
-  text: string;
-};
-
-const SLIDES: Slide[] = [
-  {
-    mascot: true,
-    title: 'Cadê o dinheiro? 🤨',
-    text: 'Todo fim de mês some uma grana e você nem sabe onde foi parar. Bora descobrir juntos?',
-  },
-  {
-    icon: 'lightning-bolt',
-    title: 'Lançar é num piscar',
-    text: 'Anotar um gasto leva uns 5 segundos: valor, categoria com ícone bonito e pronto. Sem preguiça.',
-  },
-  {
-    icon: 'chart-donut',
-    title: 'Veja onde dá pra cortar',
-    text: 'Gráficos e limites mostram pra onde sua grana está indo — e onde dá pra economizar sem sofrer.',
-  },
-  {
-    mascot: true,
-    title: 'Pra onde vai cada centavo.',
-    text: 'Quem controla os gastos sobra mais no fim do mês. Esse é o primeiro passo pra poupar de verdade.',
-  },
+/** Arte de cada slide; os textos vêm do dicionário, na mesma ordem. */
+const SLIDE_ART: { icon?: any; mascot?: boolean }[] = [
+  { mascot: true },
+  { icon: 'lightning-bolt' },
+  { icon: 'chart-donut' },
+  { mascot: true },
 ];
 
 export default function OnboardingScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const { complete } = useOnboarding();
   const scrollRef = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
 
-  const isLast = page === SLIDES.length - 1;
+  const isLast = page === SLIDE_ART.length - 1;
 
   function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const p = Math.round(e.nativeEvent.contentOffset.x / width);
@@ -84,7 +64,9 @@ export default function OnboardingScreen() {
       <View style={styles.topBar}>
         {!isLast && (
           <Pressable onPress={finish} hitSlop={10} style={styles.skip}>
-            <Text style={[styles.skipText, { color: colors.textMuted }]}>Pular</Text>
+            <Text style={[styles.skipText, { color: colors.textMuted }]}>
+              {t.onboarding.skip}
+            </Text>
           </Pressable>
         )}
       </View>
@@ -97,7 +79,7 @@ export default function OnboardingScreen() {
         onMomentumScrollEnd={onScroll}
         scrollEventThrottle={16}
       >
-        {SLIDES.map((slide, i) => (
+        {SLIDE_ART.map((slide, i) => (
           <View key={i} style={[styles.slide, { width }]}>
             <View style={styles.art}>
               {slide.mascot ? (
@@ -108,15 +90,19 @@ export default function OnboardingScreen() {
                 </View>
               )}
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>{slide.title}</Text>
-            <Text style={[styles.text, { color: colors.textMuted }]}>{slide.text}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {t.onboarding.slides[i].title}
+            </Text>
+            <Text style={[styles.text, { color: colors.textMuted }]}>
+              {t.onboarding.slides[i].text}
+            </Text>
           </View>
         ))}
       </ScrollView>
 
       {/* Indicadores */}
       <View style={styles.dots}>
-        {SLIDES.map((_, i) => (
+        {SLIDE_ART.map((_, i) => (
           <View
             key={i}
             style={[
@@ -137,7 +123,7 @@ export default function OnboardingScreen() {
           style={[styles.button, { backgroundColor: colors.primary }]}
         >
           <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
-            {isLast ? 'Começar' : 'Próximo'}
+            {isLast ? t.onboarding.start : t.onboarding.next}
           </Text>
           <MaterialCommunityIcons
             name={isLast ? 'rocket-launch' : 'arrow-right'}

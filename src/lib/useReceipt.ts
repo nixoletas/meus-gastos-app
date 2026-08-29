@@ -8,6 +8,7 @@
  * disso, o rascunho é apagado (linha + arquivo no Storage).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { tNow } from '../i18n';
 import { DraftItem, Receipt } from '../types';
 import {
   createQrReceipt,
@@ -128,7 +129,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
         await runParse(created);
       } catch (err) {
         setPhase('failed');
-        setError(err instanceof Error ? err.message : 'Não consegui ler esse QR Code.');
+        setError(err instanceof Error ? err.message : tNow().errors.readQr);
       }
     },
     [userId, receipt, runParse]
@@ -157,7 +158,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
         await runParse(created);
       } catch (err) {
         setPhase('failed');
-        setError(err instanceof Error ? err.message : 'Não consegui ler a notinha.');
+        setError(err instanceof Error ? err.message : tNow().errors.readReceipt);
       }
     },
     [userId, receipt, runParse]
@@ -169,7 +170,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
       await runParse(receipt);
     } catch (err) {
       setPhase('failed');
-      setError(err instanceof Error ? err.message : 'Não consegui ler a notinha.');
+      setError(err instanceof Error ? err.message : tNow().errors.readReceipt);
     }
   }, [receipt, runParse]);
 

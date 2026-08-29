@@ -24,6 +24,7 @@ import { PIGGY_BRAND } from '../../src/components/mascotSvg';
 import { PeriodSwitcher } from '../../src/components/PeriodSwitcher';
 import { useAuth } from '../../src/context/AuthContext';
 import { useData } from '../../src/context/DataContext';
+import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { Expense } from '../../src/types';
 import {
@@ -38,6 +39,7 @@ type DaySection = { title: string; key: string; total: number; data: Expense[] }
 
 export default function HomeScreen() {
   const { colors, isDark } = useTheme();
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -64,8 +66,8 @@ export default function HomeScreen() {
     const raw = fromMeta
       ? String(fromMeta).trim().split(' ')[0]
       : (session?.user.email?.split('@')[0] ?? '').split(/[._-]/)[0];
-    return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : 'você';
-  }, [session?.user.email, session?.user.user_metadata]);
+    return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : t.home.fallbackName;
+  }, [session?.user.email, session?.user.user_metadata, t]);
 
   // Avatar do Google (se houver) para mostrar no lugar do mascote.
   const avatarUrl: string | undefined = useMemo(() => {
@@ -135,7 +137,7 @@ export default function HomeScreen() {
           )}
         </View>
         <Text style={[styles.appName, { color: colors.text }]} numberOfLines={2}>
-          Bora poupar, {firstName}!
+          {t.home.greeting(firstName)}
         </Text>
       </View>
 
@@ -155,7 +157,7 @@ export default function HomeScreen() {
       >
         <View style={styles.totalTopRow}>
           <Text style={[styles.totalLabel, { color: hexWithAlpha('#FFFFFF', 0.9) }]}>
-            Total gasto {period === 'month' ? 'no mês' : 'no ano'}
+            {period === 'month' ? t.home.totalMonth : t.home.totalYear}
           </Text>
           <Pressable
             onPress={() => setHideValue(!hideValue)}
@@ -176,8 +178,7 @@ export default function HomeScreen() {
           <View style={styles.totalChip}>
             <MaterialCommunityIcons name="receipt-text-outline" size={14} color="#FFFFFF" />
             <Text style={styles.totalChipText}>
-              {periodExpenses.length}{' '}
-              {periodExpenses.length === 1 ? 'lançamento' : 'lançamentos'}
+              {t.home.entriesCount(periodExpenses.length)}
             </Text>
           </View>
           {trend !== null && (
@@ -188,8 +189,9 @@ export default function HomeScreen() {
                 color="#FFFFFF"
               />
               <Text style={styles.totalChipText}>
-                {trend > 0 ? '+' : ''}
-                {Math.round(trend * 100)}% vs {period === 'month' ? 'mês' : 'ano'} anterior
+                {(period === 'month' ? t.home.trendMonth : t.home.trendYear)(
+                  `${trend > 0 ? '+' : ''}${Math.round(trend * 100)}`
+                )}
               </Text>
             </View>
           )}
@@ -217,12 +219,15 @@ export default function HomeScreen() {
             />
             <View style={{ flex: 1 }}>
               <Text style={[styles.alertTitle, { color: colors.text }]}>
-                {exceeded ? 'Limite ultrapassado' : 'Perto do limite'}
-                {alert.category ? ` · ${alert.category.name}` : ' · Geral'}
+                {exceeded ? t.home.limitExceeded : t.home.limitNear}
+                {alert.category ? ` · ${alert.category.name}` : ` · ${t.common.general}`}
               </Text>
               <Text style={[styles.alertText, { color: colors.textMuted }]}>
-                {formatBRL(alert.spent)} de {formatBRL(alert.budget.limit_amount)} (
-                {Math.round(alert.ratio * 100)}%)
+                {t.home.alertAmounts(
+                  formatBRL(alert.spent),
+                  formatBRL(alert.budget.limit_amount),
+                  Math.round(alert.ratio * 100)
+                )}
               </Text>
             </View>
           </View>
@@ -233,11 +238,11 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Limite de gastos
+            {t.home.spendingLimits}
           </Text>
           <Pressable onPress={() => router.push('/limites')} hitSlop={8}>
             <Text style={[styles.sectionAction, { color: colors.primary }]}>
-              Gerenciar
+              {t.home.manage}
             </Text>
           </Pressable>
         </View>
@@ -252,10 +257,10 @@ export default function HomeScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.ctaTitle, { color: colors.text }]}>
-                Defina um limite
+                {t.home.setLimitTitle}
               </Text>
               <Text style={[styles.ctaText, { color: colors.textMuted }]}>
-                Receba alertas ao se aproximar do teto de gastos.
+                {t.home.setLimitText}
               </Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
@@ -280,7 +285,7 @@ export default function HomeScreen() {
                 <View style={styles.catMiddle}>
                   <View style={styles.catLabelRow}>
                     <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>
-                      {b.category?.name ?? 'Limite geral'}
+                      {b.category?.name ?? t.common.generalLimit}
                     </Text>
                     <Text style={[styles.catValue, { color: colors.text }]}>
                       {formatBRL(b.spent)} / {formatBRL(b.budget.limit_amount)}
@@ -299,8 +304,10 @@ export default function HomeScreen() {
                   </View>
                   <Text style={[styles.budgetRemaining, { color: barColor }]}>
                     {b.spent >= b.budget.limit_amount
-                      ? `Ultrapassou ${formatBRL(b.spent - b.budget.limit_amount)}`
-                      : `Faltam ${formatBRL(b.budget.limit_amount - b.spent)} para o limite`}
+                      ? t.home.overBy(formatBRL(b.spent - b.budget.limit_amount))
+                      : t.home.remainingToLimit(
+                          formatBRL(b.budget.limit_amount - b.spent)
+                        )}
                   </Text>
                 </View>
               </View>
@@ -311,7 +318,7 @@ export default function HomeScreen() {
 
       {periodExpenses.length > 0 && (
         <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 8 }]}>
-          Lançamentos
+          {t.home.entriesTitle}
         </Text>
       )}
     </View>
@@ -323,7 +330,7 @@ export default function HomeScreen() {
         <View style={styles.empty}>
           <ActivityIndicator color={colors.primary} size="large" />
           <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-            {seeding ? 'Preparando suas categorias...' : 'Carregando...'}
+            {seeding ? t.home.preparingCategories : t.common.loading}
           </Text>
         </View>
       );
@@ -334,10 +341,10 @@ export default function HomeScreen() {
           <MaterialCommunityIcons name="cash-plus" size={40} color={colors.primary} />
         </View>
         <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          Nenhum gasto por aqui
+          {t.home.emptyTitle}
         </Text>
         <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-          Toque no botão + para lançar seu primeiro gasto deste período.
+          {t.home.emptyText}
         </Text>
       </View>
     );

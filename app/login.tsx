@@ -12,11 +12,13 @@ import { Mascot } from '../src/components/Mascot';
 import { PIGGY_BRAND } from '../src/components/mascotSvg';
 import { PressableScale } from '../src/components/PressableScale';
 import { useAuth } from '../src/context/AuthContext';
+import { useT } from '../src/i18n';
 import { useTheme } from '../src/theme/ThemeContext';
 import { Text } from '../src/theme/typography';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const { signInWithGoogle } = useAuth();
   const router = useRouter();
 
@@ -42,7 +44,7 @@ export default function LoginScreen() {
         </View>
         <Text style={[styles.title, { color: colors.text }]}>Meus Gastos</Text>
         <Text style={[styles.slogan, { color: colors.primary }]}>
-          Pra onde vai cada centavo.
+          {t.login.slogan}
         </Text>
 
         <View style={styles.form}>
@@ -58,7 +60,7 @@ export default function LoginScreen() {
               <>
                 <GoogleIcon size={22} />
                 <Text style={[styles.googleText, { color: colors.text }]}>
-                  Continuar com Google
+                  {t.login.google}
                 </Text>
               </>
             )}
@@ -67,23 +69,23 @@ export default function LoginScreen() {
           {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
 
           <Text style={[styles.hint, { color: colors.textMuted }]}>
-            Entre com sua conta Google. Sem senha, sem complicação.
+            {t.login.hint}
           </Text>
 
           <Text style={[styles.consent, { color: colors.textMuted }]}>
-            Ao continuar, você concorda com os{' '}
+            {t.login.consentPrefix}{' '}
             <Text
               style={{ color: colors.primary, fontWeight: '700' }}
               onPress={() => router.push({ pathname: '/legal', params: { doc: 'terms' } })}
             >
-              Termos de Uso
+              {t.login.terms}
             </Text>{' '}
-            e a{' '}
+            {t.login.consentMiddle}{' '}
             <Text
               style={{ color: colors.primary, fontWeight: '700' }}
               onPress={() => router.push({ pathname: '/legal', params: { doc: 'privacy' } })}
             >
-              Política de Privacidade
+              {t.login.privacy}
             </Text>
             .
           </Text>

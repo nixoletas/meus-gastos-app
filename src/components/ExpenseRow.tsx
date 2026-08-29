@@ -5,6 +5,7 @@ import { StyleSheet,
   View,
 } from 'react-native';
 import { Text } from '../theme/typography';
+import { useT } from '../i18n';
 import { Category, Expense } from '../types';
 import { useTheme } from '../theme/ThemeContext';
 import { formatBRL } from '../utils/currency';
@@ -21,19 +22,20 @@ type Props = {
 /** Linha de um gasto na lista. */
 export function ExpenseRow({ expense, category, subcategory, onPress }: Props) {
   const { colors } = useTheme();
+  const t = useT();
 
   const display = subcategory ?? category;
   const icon = display?.icon ?? 'tag';
   const color = category?.color ?? display?.color ?? colors.textMuted;
 
-  const title = subcategory?.name ?? category?.name ?? 'Gasto';
+  const title = subcategory?.name ?? category?.name ?? t.common.expense;
   const note = expense.note?.trim();
   // Gasto com notinha mostra o que tem dentro sem precisar abrir.
   const detail =
     expense.items_count > 0
-      ? `${expense.items_count} ${expense.items_count === 1 ? 'item' : 'itens'}`
+      ? t.expenseRow.itemsCount(expense.items_count)
       : expense.has_receipt
-        ? 'notinha'
+        ? t.common.receipt
         : null;
   // Mostra a nota; se não houver, a categoria-mãe (quando for subcategoria).
   const secondary = note || (subcategory ? category?.name : undefined);

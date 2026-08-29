@@ -3,6 +3,7 @@
 // Dois provedores atrás da mesma função: `gemini` (padrão, tem free tier) e
 // `anthropic`. O schema de saída é o mesmo JSON Schema nos dois — quem troca
 // é só a forma da requisição. Escolha por `RECEIPT_PROVIDER`.
+import { Lang, t } from '../_shared/i18n.ts';
 import { RECEIPT_SCHEMA, SYSTEM_PROMPT, USER_PROMPT } from './schema.ts';
 
 export type Provider = 'gemini' | 'anthropic';
@@ -35,8 +36,8 @@ export function apiKeyFor(provider: Provider): string | undefined {
   return Deno.env.get(KEY_ENV[provider]);
 }
 
-export function missingKeyMessage(provider: Provider): string {
-  return `Leitura de notinha não está configurada no servidor (falta ${KEY_ENV[provider]}).`;
+export function missingKeyMessage(provider: Provider, lang: Lang): string {
+  return t(lang).receipt.missingKey(KEY_ENV[provider]);
 }
 
 function modelFor(provider: Provider): string {
@@ -46,7 +47,7 @@ function modelFor(provider: Provider): string {
 /** Os formatos que o bucket aceita e que os dois provedores entendem. */
 export type MediaType = 'image/jpeg' | 'image/png' | 'image/webp';
 
-type Input = { base64: string; mediaType: MediaType; apiKey: string };
+type Input = { base64: string; mediaType: MediaType; apiKey: string; lang: Lang };
 
 /**
  * Gemini via REST.
@@ -55,7 +56,8 @@ type Input = { base64: string; mediaType: MediaType; apiKey: string };
  * o corpo é pequeno e assim a função não carrega um pacote npm inteiro em
  * cada cold start.
  */
-async function readWithGemini({ base64, mediaType, apiKey }: Input): Promise<unknown> {
+async function readWithGemini({ base64, mediaType, apiKey, lang }: Input): Promise<unknown> {
+  const erros = t(lang).receipt;
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
     method: 'POST',
     headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
@@ -80,15 +82,12 @@ async function readWithGemini({ base64, mediaType, apiKey }: Input): Promise<unk
 
     // 429 no free tier é cota, não bug: a mensagem tem que dizer isso.
     if (response.status === 429) {
-      throw new ReaderError(
-        'A cota grátis de leitura acabou por agora. Tente de novo mais tarde.',
-        429
-      );
+      throw new ReaderError(erros.quotaOver, 429);
     }
     if (response.status === 401 || response.status === 403) {
-      throw new ReaderError('A chave da leitura de notinha foi recusada.', 500);
+      throw new ReaderError(erros.keyRefused, 500);
     }
-    throw new ReaderError('A leitura da notinha falhou. Tente de novo.', 502);
+    throw new ReaderError(erros.readFailed, 502);
   }
 
   const data = (await response.json()) as {
@@ -105,12 +104,13 @@ async function readWithGemini({ base64, mediaType, apiKey }: Input): Promise<unk
       .map((block) => block.text ?? '')
       .join('');
 
-  if (!text) throw new ReaderError('A leitura voltou vazia. Tente de novo.', 502);
+  if (!text) throw new ReaderError(erros.emptyRead, 502);
   return JSON.parse(text);
 }
 
 /** Anthropic via SDK oficial. Import dinâmico: só carrega se for o provedor ativo. */
-async function readWithAnthropic({ base64, mediaType, apiKey }: Input): Promise<unknown> {
+async function readWithAnthropic({ base64, mediaType, apiKey, lang }: Input): Promise<unknown> {
+  const erros = t(lang).receipt;
   const { default: Anthropic } = await import('npm:@anthropic-ai/sdk');
   const anthropic = new Anthropic({ apiKey });
 
@@ -136,12 +136,12 @@ async function readWithAnthropic({ base64, mediaType, apiKey }: Input): Promise<
   });
 
   if (message.stop_reason === 'refusal') {
-    throw new ReaderError('Não consegui ler essa imagem. Tente outra foto.', 422);
+    throw new ReaderError(erros.cantReadImage, 422);
   }
 
   const block = message.content.find((item) => item.type === 'text');
   if (!block || block.type !== 'text') {
-    throw new ReaderError('A leitura voltou vazia. Tente de novo.', 502);
+    throw new ReaderError(erros.emptyRead, 502);
   }
   return JSON.parse(block.text);
 }

@@ -7,6 +7,7 @@ import { hexWithAlpha } from './CategoryIcon';
 import { PressableScale } from './PressableScale';
 import { useTheme } from '../theme/ThemeContext';
 import { Text } from '../theme/typography';
+import { useI18n } from '../i18n';
 import { supabase } from '../lib/supabase';
 import { monthName } from '../utils/date';
 
@@ -29,6 +30,7 @@ type ReportResult = {
 
 export function ReportExportModal({ visible, onClose, userEmail }: Props) {
   const { colors } = useTheme();
+  const { t, lang } = useI18n();
   const now = new Date();
   const [kind, setKind] = useState<Kind>('month');
   const [year, setYear] = useState(now.getFullYear());
@@ -48,11 +50,16 @@ export function ReportExportModal({ visible, onClose, userEmail }: Props) {
     setYear(y);
   }
 
-  const label = kind === 'year' ? String(year) : `${monthName(month)} de ${year}`;
+  const label =
+    kind === 'year'
+      ? String(year)
+      : lang === 'en'
+        ? `${monthName(month)} ${year}`
+        : `${monthName(month)} de ${year}`;
 
   async function generate(send: boolean): Promise<ReportResult | null> {
     const { data, error } = await supabase.functions.invoke<ReportResult>('export-report', {
-      body: { period: kind, year, month: month + 1, send },
+      body: { period: kind, year, month: month + 1, send, lang },
     });
     if (error) {
       // Erros da função vêm no corpo da resposta; tentamos extrair a mensagem.
@@ -61,15 +68,15 @@ export function ReportExportModal({ visible, onClose, userEmail }: Props) {
         const ctx = (error as any).context;
         if (ctx?.json) { const b = await ctx.json(); msg = b?.error ?? msg; }
       } catch { /* ignore */ }
-      Alert.alert('Ops', msg ?? 'Não consegui gerar o relatório.');
+      Alert.alert(t.report.oops, msg ?? t.report.genericError);
       return null;
     }
     if (!data?.ok) {
-      Alert.alert('Ops', data?.error ?? 'Não consegui gerar o relatório.');
+      Alert.alert(t.report.oops, data?.error ?? t.report.genericError);
       return null;
     }
     if (data.count === 0) {
-      Alert.alert('Sem gastos', `Não há lançamentos em ${label} para exportar.`);
+      Alert.alert(t.report.noExpensesTitle, t.report.noExpenses(label));
       return null;
     }
     return data;
@@ -80,7 +87,10 @@ export function ReportExportModal({ visible, onClose, userEmail }: Props) {
     const res = await generate(true);
     setBusy(null);
     if (res) {
-      Alert.alert('Enviado! 📬', `Seu relatório de ${label} foi para ${userEmail ?? 'seu e-mail'}.`);
+      Alert.alert(
+        t.report.sentTitle,
+        t.report.sent(label, userEmail ?? t.report.yourEmail)
+      );
       onClose();
     }
   }
@@ -97,22 +107,22 @@ export function ReportExportModal({ visible, onClose, userEmail }: Props) {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(uri, {
             mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            dialogTitle: `Relatório ${label}`,
+            dialogTitle: t.report.shareTitle(label),
             UTI: 'org.openxmlformats.spreadsheetml.sheet',
           });
         } else {
-          Alert.alert('Pronto', 'Arquivo gerado, mas o compartilhamento não está disponível neste aparelho.');
+          Alert.alert(t.report.doneTitle, t.report.noSharing);
         }
       } catch {
-        Alert.alert('Ops', 'Não consegui salvar o arquivo.');
+        Alert.alert(t.report.oops, t.report.saveFailed);
       }
     }
     setBusy(null);
   }
 
   const kindOptions: { key: Kind; label: string; icon: any }[] = [
-    { key: 'month', label: 'Mensal', icon: 'calendar-month' },
-    { key: 'year', label: 'Anual', icon: 'calendar-blank-multiple' },
+    { key: 'month', label: t.report.monthly, icon: 'calendar-month' },
+    { key: 'year', label: t.report.yearly, icon: 'calendar-blank-multiple' },
   ];
 
   return (
@@ -122,9 +132,9 @@ export function ReportExportModal({ visible, onClose, userEmail }: Props) {
           <View style={[styles.iconWrap, { backgroundColor: hexWithAlpha(colors.primary, 0.14) }]}>
             <MaterialCommunityIcons name="file-excel" size={34} color={colors.primary} />
           </View>
-          <Text style={[styles.title, { color: colors.text }]}>Exportar relatório</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t.report.title}</Text>
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            Uma planilha Excel bonita com todos os seus gastos do período.
+            {t.report.subtitle}
           </Text>
 
           {/* Tipo: mensal / anual */}
@@ -175,7 +185,9 @@ export function ReportExportModal({ visible, onClose, userEmail }: Props) {
             ) : (
               <>
                 <MaterialCommunityIcons name="email-fast" size={20} color={colors.onPrimary} />
-                <Text style={[styles.primaryText, { color: colors.onPrimary }]}>Enviar no meu e-mail</Text>
+                <Text style={[styles.primaryText, { color: colors.onPrimary }]}>
+                  {t.report.sendEmail}
+                </Text>
               </>
             )}
           </PressableScale>
@@ -190,13 +202,15 @@ export function ReportExportModal({ visible, onClose, userEmail }: Props) {
             ) : (
               <>
                 <MaterialCommunityIcons name="download" size={20} color={colors.text} />
-                <Text style={[styles.secondaryText, { color: colors.text }]}>Baixar / compartilhar</Text>
+                <Text style={[styles.secondaryText, { color: colors.text }]}>
+                  {t.report.download}
+                </Text>
               </>
             )}
           </Pressable>
 
           <Pressable onPress={() => !busy && onClose()} style={styles.cancel}>
-            <Text style={[styles.cancelText, { color: colors.textMuted }]}>Fechar</Text>
+            <Text style={[styles.cancelText, { color: colors.textMuted }]}>{t.common.close}</Text>
           </Pressable>
         </View>
       </View>

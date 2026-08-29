@@ -5,6 +5,7 @@ import { ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
+import { useT } from '../src/i18n';
 import { Text } from '../src/theme/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../src/theme/ThemeContext';
@@ -12,14 +13,8 @@ import { useTheme } from '../src/theme/ThemeContext';
 /** Mostrada quando faltam as variáveis do Supabase no arquivo .env. */
 export default function ConfigScreen() {
   const { colors } = useTheme();
-
-  const steps = [
-    'Crie uma conta gratuita em supabase.com e um novo projeto.',
-    'No painel do Supabase, abra o "SQL Editor" e rode o conteúdo do arquivo supabase/schema.sql.',
-    'Vá em Project Settings > API e copie a "Project URL" e a chave "anon public".',
-    'Copie o arquivo .env.example para .env e cole esses dois valores.',
-    'Pare o servidor e rode novamente: npx expo start --clear',
-  ];
+  const t = useT();
+  const steps = t.setup.steps;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -28,11 +23,10 @@ export default function ConfigScreen() {
           <MaterialCommunityIcons name="cog" size={36} color={colors.primary} />
         </View>
         <Text style={[styles.title, { color: colors.text }]}>
-          Falta configurar o Supabase
+          {t.setup.title}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          O Meus Gastos usa o Supabase para login e sincronização entre o celular
-          e a web. Siga os passos abaixo uma única vez:
+          {t.setup.subtitle}
         </Text>
 
         {steps.map((step, i) => (

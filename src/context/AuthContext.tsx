@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useState,
 } from 'react';
+import { tNow } from '../i18n';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 // Client ID Web do Google (audiência do ID token). O client Android (pacote + SHA-1)
@@ -29,14 +30,13 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-/** Traduz mensagens comuns de erro do Supabase/Google para português. */
+/** Traduz mensagens comuns de erro do Supabase/Google para o idioma ativo. */
 function traduzErro(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('network')) return 'Sem conexão. Verifique sua internet.';
-  if (m.includes('play services'))
-    return 'Google Play Services indisponível ou desatualizado.';
-  if (m.includes('rate limit') || m.includes('too many'))
-    return 'Muitas tentativas. Aguarde um instante e tente de novo.';
+  const erros = tNow().errors;
+  if (m.includes('network')) return erros.noConnection;
+  if (m.includes('play services')) return erros.playServices;
+  if (m.includes('rate limit') || m.includes('too many')) return erros.rateLimit;
   return message;
 }
 

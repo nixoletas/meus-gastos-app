@@ -1,32 +1,58 @@
 /**
- * Utilitários para a máscara de dinheiro em Real brasileiro (R$).
+ * Utilitários da máscara de dinheiro.
+ *
+ * Os valores são sempre em Real (R$) — é a moeda em que o gasto foi lançado.
+ * O que muda com o idioma é só a formatação: "R$ 1.234,56" em pt-BR e
+ * "R$ 1,234.56" em inglês.
  *
  * Estratégia da máscara: o usuário digita apenas números e os 2 últimos
  * dígitos são sempre os centavos. Ex.: digitar "12345" => R$ 123,45.
  */
+import { getActiveLang, getActiveLocale } from '../i18n/active';
 
-const brlFormatter = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+const currencyCache = new Map<string, Intl.NumberFormat>();
+const numberCache = new Map<string, Intl.NumberFormat>();
 
-const numberFormatter = new Intl.NumberFormat('pt-BR', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+function currencyFormatter(): Intl.NumberFormat {
+  const locale = getActiveLocale();
+  let fmt = currencyCache.get(locale);
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    currencyCache.set(locale, fmt);
+  }
+  return fmt;
+}
+
+function plainFormatter(): Intl.NumberFormat {
+  const locale = getActiveLocale();
+  let fmt = numberCache.get(locale);
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    numberCache.set(locale, fmt);
+  }
+  return fmt;
+}
 
 /** Formata um valor em reais (número decimal) como "R$ 1.234,56". */
 export function formatBRL(value: number): string {
-  if (!Number.isFinite(value)) return brlFormatter.format(0);
-  return brlFormatter.format(value);
+  const fmt = currencyFormatter();
+  if (!Number.isFinite(value)) return fmt.format(0);
+  return fmt.format(value);
 }
 
 /** Formata sem o símbolo "R$", apenas "1.234,56". */
 export function formatNumber(value: number): string {
-  if (!Number.isFinite(value)) return numberFormatter.format(0);
-  return numberFormatter.format(value);
+  const fmt = plainFormatter();
+  if (!Number.isFinite(value)) return fmt.format(0);
+  return fmt.format(value);
 }
 
 /**
@@ -47,7 +73,7 @@ export function rawToReais(raw: string): number {
  */
 export function maskCurrencyInput(raw: string): string {
   const value = rawToReais(raw);
-  return numberFormatter.format(value);
+  return formatNumber(value);
 }
 
 /** Converte um valor em reais de volta para a string de dígitos (centavos). */
@@ -58,11 +84,14 @@ export function reaisToRaw(value: number): string {
 /** Abrevia valores grandes: 1.500 -> "R$ 1,5 mil", 2.000.000 -> "R$ 2 mi". */
 export function formatBRLCompact(value: number): string {
   const abs = Math.abs(value);
+  const en = getActiveLang() === 'en';
+  // Em pt-BR o zero decimal cai ("1,50 mil" fica pior que "1,5 mil").
+  const trim = (n: number) => formatNumber(n).replace(en ? '.00' : ',00', '');
   if (abs >= 1_000_000) {
-    return `R$ ${formatNumber(value / 1_000_000).replace(',00', '')} mi`;
+    return en ? `R$${trim(value / 1_000_000)}M` : `R$ ${trim(value / 1_000_000)} mi`;
   }
   if (abs >= 10_000) {
-    return `R$ ${formatNumber(value / 1_000).replace(',00', '')} mil`;
+    return en ? `R$${trim(value / 1_000)}K` : `R$ ${trim(value / 1_000)} mil`;
   }
   return formatBRL(value);
 }

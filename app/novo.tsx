@@ -35,6 +35,7 @@ import { SuccessFlash } from '../src/components/SuccessFlash';
 import { SuccessOverlay } from '../src/components/SuccessOverlay';
 import { useAuth } from '../src/context/AuthContext';
 import { useData } from '../src/context/DataContext';
+import { useT } from '../src/i18n';
 import { ParseResult, takePendingScan } from '../src/lib/receipts';
 import { useReceipt } from '../src/lib/useReceipt';
 import { useTheme } from '../src/theme/ThemeContext';
@@ -58,6 +59,7 @@ function readRememberedDate(): string | null {
 
 export default function NovoGastoScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const { session } = useAuth();
@@ -147,8 +149,8 @@ export default function NovoGastoScreen() {
       setNote(editing.note ?? '');
       setDate(fromISODate(editing.occurred_at));
     } else {
-      const t = setTimeout(() => amountRef.current?.focus(), 350);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => amountRef.current?.focus(), 350);
+      return () => clearTimeout(timer);
     }
   }, [editing?.id]);
 
@@ -233,7 +235,7 @@ export default function NovoGastoScreen() {
 
     if (keepOpen) {
       // Comemoração leve: o overlay cheio encerra o fluxo, e aqui ele continua.
-      setFlash({ id: Date.now(), label: `${formatBRL(amount)} lançado` });
+      setFlash({ id: Date.now(), label: t.expense.flashSaved(formatBRL(amount)) });
       setRaw('');
       setNote('');
       receiptState.reset();
@@ -259,10 +261,10 @@ export default function NovoGastoScreen() {
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
     return [
-      { label: 'Hoje', value: today },
-      { label: 'Ontem', value: yesterday },
+      { label: t.expense.today, value: today },
+      { label: t.expense.yesterday, value: yesterday },
     ];
-  }, []);
+  }, [t]);
 
   // Verdadeiro quando a data escolhida é Hoje ou Ontem (atalhos rápidos).
   const isQuickDate = quickDates.some(
@@ -282,7 +284,7 @@ export default function NovoGastoScreen() {
             <MaterialCommunityIcons name="close" size={26} color={colors.text} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {editing ? 'Editar gasto' : 'Novo gasto'}
+            {editing ? t.expense.editTitle : t.expense.newTitle}
           </Text>
           {editing ? (
             <Pressable onPress={() => setConfirmDelete(true)} hitSlop={12} style={styles.headerBtn}>
@@ -312,7 +314,7 @@ export default function NovoGastoScreen() {
                 onChangeText={handleAmountChange}
                 keyboardType="number-pad"
                 style={[styles.amountInput, { color: amount > 0 ? colors.text : colors.textMuted }]}
-                placeholder="0,00"
+                placeholder={t.expense.amountPlaceholder}
                 placeholderTextColor={colors.textMuted}
                 selectionColor={colors.primary}
               />
@@ -320,7 +322,7 @@ export default function NovoGastoScreen() {
           </Animated.View>
 
           {/* Categorias */}
-          <Text style={[styles.label, { color: colors.text }]}>Categoria</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t.expense.category}</Text>
           <View style={styles.chipsWrap}>
             {categoriesWithSubs.map((cat) => {
               const active = cat.id === categoryId;
@@ -359,7 +361,7 @@ export default function NovoGastoScreen() {
               style={[styles.createChip, { borderColor: colors.primary }]}
             >
               <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
-              <Text style={[styles.chipText, { color: colors.primary }]}>Criar</Text>
+              <Text style={[styles.chipText, { color: colors.primary }]}>{t.expense.create}</Text>
             </Pressable>
           </View>
 
@@ -367,7 +369,8 @@ export default function NovoGastoScreen() {
           {selectedCategory && (
             <>
               <Text style={[styles.label, { color: colors.text }]}>
-                Subcategoria <Text style={{ color: colors.textMuted }}>(opcional)</Text>
+                {t.expense.subcategory}{' '}
+                <Text style={{ color: colors.textMuted }}>{t.expense.optional}</Text>
               </Text>
               <View style={styles.chipsWrap}>
                 {selectedCategory.subcategories.map((sub) => {
@@ -411,7 +414,7 @@ export default function NovoGastoScreen() {
                 >
                   <MaterialCommunityIcons name="plus" size={15} color={selectedCategory.color} />
                   <Text style={[styles.subChipText, { color: selectedCategory.color }]}>
-                    Criar
+                    {t.expense.create}
                   </Text>
                 </Pressable>
               </View>
@@ -419,7 +422,7 @@ export default function NovoGastoScreen() {
           )}
 
           {/* Data */}
-          <Text style={[styles.label, { color: colors.text }]}>Quando</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t.expense.when}</Text>
           <View style={styles.chipsWrap}>
             {quickDates.map((q) => {
               const active = toISODate(q.value) === toISODate(date);
@@ -456,20 +459,18 @@ export default function NovoGastoScreen() {
             >
               <MaterialCommunityIcons name="calendar-month" size={16} color={colors.primary} />
               <Text style={{ color: colors.text, fontWeight: '600' }}>
-                {isQuickDate ? 'Outra data' : relativeDayLabel(toISODate(date))}
+                {isQuickDate ? t.expense.otherDate : relativeDayLabel(toISODate(date))}
               </Text>
             </Pressable>
           </View>
 
           {/* Notas */}
-          <Text style={[styles.label, { color: colors.text }]}>Notas</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t.expense.notes}</Text>
           <TextInput
             value={note}
-            onChangeText={(t) => {
-              setNote(t);
-            }}
+            onChangeText={setNote}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
-            placeholder="Adicione uma nota (opcional)"
+            placeholder={t.expense.notePlaceholder}
             placeholderTextColor={colors.textMuted}
             style={[
               styles.noteInput,
@@ -520,7 +521,7 @@ export default function NovoGastoScreen() {
             >
               <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
               <Text style={[styles.againText, { color: colors.text }]}>
-                Salvar e lançar outro
+                {t.expense.saveAndNew}
               </Text>
             </PressableScale>
           )}
@@ -545,7 +546,7 @@ export default function NovoGastoScreen() {
                 { color: canSave ? colors.onPrimary : colors.textMuted },
               ]}
             >
-              {editing ? 'Salvar alterações' : 'Lançar gasto'}
+              {editing ? t.expense.saveChanges : t.expense.save}
             </Text>
           </PressableScale>
         </View>
@@ -578,8 +579,8 @@ export default function NovoGastoScreen() {
 
       <ConfirmDialog
         visible={confirmDelete}
-        title="Excluir este gasto?"
-        message="O lançamento some do histórico e dos gráficos. Não dá pra desfazer."
+        title={t.expense.deleteTitle}
+        message={t.expense.deleteMessage}
         busy={deleting}
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
