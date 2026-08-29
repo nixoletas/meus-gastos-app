@@ -46,3 +46,6 @@ yarn-error.*
 
 # EAS / Play submit
 play-service-account.json
+
+# Supabase CLI: estado local da máquina (link do projeto, versão da CLI).
+supabase/.temp/
