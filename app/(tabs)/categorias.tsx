@@ -17,6 +17,7 @@ import { AppIcon } from '../../src/components/AppIcon';
 import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useData } from '../../src/context/DataContext';
+import { useLedger } from '../../src/context/LedgerContext';
 import { normalize } from '../../src/data/icons';
 import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
@@ -25,6 +26,7 @@ import { CategoryWithSubs } from '../../src/types';
 export default function CategoriasScreen() {
   const { colors } = useTheme();
   const t = useT();
+  const { canWrite } = useLedger();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { categoriesWithSubs } = useData();
@@ -60,7 +62,9 @@ export default function CategoriasScreen() {
         <Text style={[styles.cardName, { color: colors.text }]} numberOfLines={1}>
           {item.name}
         </Text>
-        <MaterialCommunityIcons name="pencil" size={18} color={colors.textMuted} />
+        {canWrite && (
+          <MaterialCommunityIcons name="pencil" size={18} color={colors.textMuted} />
+        )}
       </Pressable>
 
       <View style={styles.subsWrap}>
@@ -74,17 +78,19 @@ export default function CategoriasScreen() {
             <Text style={[styles.subChipText, { color: colors.text }]}>{sub.name}</Text>
           </Pressable>
         ))}
-        <Pressable
-          onPress={() =>
-            router.push({ pathname: '/categoria', params: { parentId: item.id } })
-          }
-          style={[styles.subChip, { borderColor: colors.border, borderWidth: 1.5 }]}
-        >
-          <MaterialCommunityIcons name="plus" size={15} color={colors.textMuted} />
-          <Text style={[styles.subChipText, { color: colors.textMuted }]}>
-            {t.categories.add}
-          </Text>
-        </Pressable>
+        {canWrite && (
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/categoria', params: { parentId: item.id } })
+            }
+            style={[styles.subChip, { borderColor: colors.border, borderWidth: 1.5 }]}
+          >
+            <MaterialCommunityIcons name="plus" size={15} color={colors.textMuted} />
+            <Text style={[styles.subChipText, { color: colors.textMuted }]}>
+              {t.categories.add}
+            </Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -95,17 +101,19 @@ export default function CategoriasScreen() {
       <View style={styles.fixedHeader}>
         <View style={styles.titleRow}>
           <Text style={[styles.title, { color: colors.text }]}>{t.categories.title}</Text>
-          <PressableScale
-            onPress={() => {
-              router.push('/categoria');
-            }}
-            style={[styles.addBtn, { backgroundColor: colors.primary }]}
-          >
-            <MaterialCommunityIcons name="plus" size={20} color={colors.onPrimary} />
-            <Text style={[styles.addBtnText, { color: colors.onPrimary }]}>
-              {t.categories.new}
-            </Text>
-          </PressableScale>
+          {canWrite && (
+            <PressableScale
+              onPress={() => {
+                router.push('/categoria');
+              }}
+              style={[styles.addBtn, { backgroundColor: colors.primary }]}
+            >
+              <MaterialCommunityIcons name="plus" size={20} color={colors.onPrimary} />
+              <Text style={[styles.addBtnText, { color: colors.onPrimary }]}>
+                {t.categories.new}
+              </Text>
+            </PressableScale>
+          )}
         </View>
 
         <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -137,7 +145,7 @@ export default function CategoriasScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="none"
         ListEmptyComponent={
-          query.trim().length > 0 ? (
+          query.trim().length > 0 && canWrite ? (
             <PressableScale
               onPress={() => {
                 router.push({ pathname: '/categoria', params: { name: query.trim() } });

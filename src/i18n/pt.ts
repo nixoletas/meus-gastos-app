@@ -141,6 +141,57 @@ export const pt = {
     deleteAnyway: 'Excluir minha conta mesmo assim',
   },
 
+  sharing: {
+    section: 'FAMÍLIA',
+    title: 'Compartilhar meus gastos',
+    subtitleNobody: 'Ninguém acompanha seus gastos',
+    subtitleCount: (n: number) =>
+      n === 1 ? '1 pessoa acompanha seus gastos' : `${n} pessoas acompanham seus gastos`,
+    subtitleViewing: (name: string) => `Vendo os gastos de ${name}`,
+
+    myLedgers: 'CADERNOS',
+    myLedger: 'Meus gastos',
+    active: 'Aberto agora',
+    roleOwner: 'Você é o dono',
+    roleViewer: 'Só leitura',
+    roleEditor: 'Pode editar',
+    leave: 'Sair deste caderno',
+    leaveConfirmTitle: 'Sair do caderno?',
+    leaveConfirmBody: (name: string) =>
+      `Você deixa de ver os gastos de ${name}. Seus próprios gastos não mudam em nada.`,
+
+    whoSees: 'QUEM VÊ MEUS GASTOS',
+    inviteEmailLabel: 'E-mail de quem vai acompanhar',
+    inviteEmailPlaceholder: 'nome@gmail.com',
+    inviteHint:
+      'Precisa ser o mesmo e-mail da conta Google que a pessoa usa para entrar. O acesso aparece para ela no próximo login.',
+    invitePermission: 'Permissão',
+    inviteButton: 'Convidar',
+    inviting: 'Convidando…',
+    pending: 'Aguardando entrar',
+    emptyMembers: 'Ninguém por aqui ainda. Convide alguém da família.',
+    revoke: 'Remover acesso',
+    revokeConfirmTitle: 'Remover acesso?',
+    revokeConfirmBody: (name: string) =>
+      `${name} deixa de ver seus gastos na hora. Os lançamentos que essa pessoa criou continuam no seu caderno.`,
+
+    viewingBanner: (name: string) => `Vendo os gastos de ${name}`,
+    readOnlyBadge: 'só leitura',
+    revokedNotice: (name: string) =>
+      name
+        ? `${name} encerrou seu acesso. Você voltou para os seus gastos.`
+        : 'Seu acesso a esse caderno foi encerrado. Você voltou para os seus gastos.',
+
+    errors: {
+      invalidEmail: 'E-mail inválido.',
+      selfInvite: 'Esse é o seu próprio e-mail.',
+      limit: 'Você já convidou o máximo de pessoas.',
+      notFound: 'Convite não encontrado. Atualize a tela.',
+      noPermission: 'Você não tem permissão para isso.',
+      generic: 'Não consegui completar. Tente de novo.',
+    },
+  },
+
   expenseRow: {
     itemsCount: (n: number) => `${n} ${n === 1 ? 'item' : 'itens'}`,
     noItems: 'Esse lançamento não tem itens.',

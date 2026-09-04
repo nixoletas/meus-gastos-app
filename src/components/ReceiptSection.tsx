@@ -39,6 +39,8 @@ type Props = {
   onChangeItems: (items: DraftItem[]) => void;
   onUseItemsTotal: (total: number) => void;
   onOpenPhoto: () => void;
+  /** Caderno de outra pessoa em que só se pode olhar: nada de anexar ou editar. */
+  readOnly?: boolean;
 };
 
 /** Quantidade com o separador decimal do idioma ativo. */
@@ -103,6 +105,7 @@ export function ReceiptSection({
   onRetry,
   onRemove,
   onChangeItems,
+  readOnly = false,
   onUseItemsTotal,
   onOpenPhoto,
 }: Props) {
@@ -136,6 +139,9 @@ export function ReceiptSection({
     setEditing(null);
   }
 
+  // Num caderno alheio sem notinha nem itens não há nada a mostrar.
+  if (readOnly && !receipt && items.length === 0) return null;
+
   return (
     <View style={styles.wrap}>
       <View style={styles.labelRow}>
@@ -150,7 +156,7 @@ export function ReceiptSection({
       {/* Nada anexado ainda. O QR vem primeiro: os itens saem exatos do portal
           da SEFAZ, sem foto e sem custo. A foto cobre o resto — feira, padaria,
           recibo, cupom velho sem QR. */}
-      {!receipt && !busy && (
+      {!receipt && !busy && !readOnly && (
         <>
           <PressableScale
             onPress={onScanQr}
@@ -222,6 +228,7 @@ export function ReceiptSection({
               {error ?? t.receiptSection.readFailed}
             </Text>
           </View>
+          {!readOnly && (
           <View style={styles.failActions}>
             {!!receipt && (
               <Pressable onPress={onRetry} style={[styles.smallBtn, { backgroundColor: colors.card }]}>
@@ -251,6 +258,7 @@ export function ReceiptSection({
               </Pressable>
             )}
           </View>
+          )}
         </View>
       )}
 
@@ -289,9 +297,11 @@ export function ReceiptSection({
                 </Text>
               )}
             </View>
-            <Pressable onPress={onRemove} hitSlop={10} style={styles.removeBtn}>
-              <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.danger} />
-            </Pressable>
+            {!readOnly && (
+              <Pressable onPress={onRemove} hitSlop={10} style={styles.removeBtn}>
+                <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.danger} />
+              </Pressable>
+            )}
           </View>
 
           {!!duplicate && (
@@ -323,6 +333,7 @@ export function ReceiptSection({
           {items.map((item, index) => (
             <Pressable
               key={item.key}
+              disabled={readOnly}
               onPress={() => setEditing({ item, isNew: false })}
               style={[
                 styles.itemRow,
@@ -343,12 +354,15 @@ export function ReceiptSection({
               <Text style={[styles.itemTotal, { color: colors.text }]}>
                 {formatBRL(item.total)}
               </Text>
-              <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.textMuted} />
+              {!readOnly && (
+                <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.textMuted} />
+              )}
             </Pressable>
           ))}
         </View>
       )}
 
+      {!readOnly && (
       <View style={styles.footerRow}>
         <Pressable
           onPress={() => setEditing({ item: newDraftItem(), isNew: true })}
@@ -374,8 +388,9 @@ export function ReceiptSection({
           </Pressable>
         )}
       </View>
+      )}
 
-      {!receipt && items.length === 0 && !busy && (
+      {!receipt && items.length === 0 && !busy && !readOnly && (
         <Text style={[styles.hint, { color: colors.textMuted }]}>
           {t.receiptSection.footerHint}
         </Text>

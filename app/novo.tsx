@@ -33,8 +33,8 @@ import { PressableScale } from '../src/components/PressableScale';
 import { ReceiptSection } from '../src/components/ReceiptSection';
 import { SuccessFlash } from '../src/components/SuccessFlash';
 import { SuccessOverlay } from '../src/components/SuccessOverlay';
-import { useAuth } from '../src/context/AuthContext';
 import { useData } from '../src/context/DataContext';
+import { useLedger } from '../src/context/LedgerContext';
 import { useT } from '../src/i18n';
 import { ParseResult, takePendingScan } from '../src/lib/receipts';
 import { useReceipt } from '../src/lib/useReceipt';
@@ -62,7 +62,7 @@ export default function NovoGastoScreen() {
   const t = useT();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { session } = useAuth();
+  const { ownerId, canWrite } = useLedger();
   const {
     categoriesWithSubs,
     expenses,
@@ -98,7 +98,7 @@ export default function NovoGastoScreen() {
 
   // Notinha: foto, leitura por OCR e as subcompras que saem dela.
   const receiptState = useReceipt({
-    userId: session?.user.id ?? null,
+    ownerId,
     expenseId: editing?.id ?? null,
     onParsed: (result: ParseResult) => {
       // Só preenche o que está vazio: o que a pessoa digitou vale mais que o OCR.
@@ -174,7 +174,8 @@ export default function NovoGastoScreen() {
   const amount = rawToReais(raw);
   const selectedCategory = categoriesWithSubs.find((c) => c.id === categoryId);
 
-  const canSave = amount > 0 && categoryId !== null && !saving;
+  // Quem só visualiza o caderno abre esta tela como detalhe, sem salvar nada.
+  const canSave = amount > 0 && categoryId !== null && !saving && canWrite;
 
   /**
    * `keepOpen` mantém a tela aberta com a data e a categoria, para lançar
@@ -286,7 +287,7 @@ export default function NovoGastoScreen() {
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             {editing ? t.expense.editTitle : t.expense.newTitle}
           </Text>
-          {editing ? (
+          {editing && canWrite ? (
             <Pressable onPress={() => setConfirmDelete(true)} hitSlop={12} style={styles.headerBtn}>
               <MaterialCommunityIcons name="trash-can-outline" size={24} color={colors.danger} />
             </Pressable>
@@ -495,6 +496,7 @@ export default function NovoGastoScreen() {
             onRemove={receiptState.remove}
             onChangeItems={receiptState.setItems}
             onUseItemsTotal={(value) => setRaw(reaisToRaw(value))}
+            readOnly={!canWrite}
             onOpenPhoto={() => {
               if (receiptState.receipt) {
                 router.push({

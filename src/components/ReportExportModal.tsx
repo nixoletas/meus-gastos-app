@@ -7,6 +7,7 @@ import { hexWithAlpha } from './CategoryIcon';
 import { PressableScale } from './PressableScale';
 import { useTheme } from '../theme/ThemeContext';
 import { Text } from '../theme/typography';
+import { useLedger } from '../context/LedgerContext';
 import { useI18n } from '../i18n';
 import { supabase } from '../lib/supabase';
 import { monthName } from '../utils/date';
@@ -31,6 +32,8 @@ type ReportResult = {
 export function ReportExportModal({ visible, onClose, userEmail }: Props) {
   const { colors } = useTheme();
   const { t, lang } = useI18n();
+  // Exporta o caderno que está aberto, não a união dos compartilhados.
+  const { ownerId } = useLedger();
   const now = new Date();
   const [kind, setKind] = useState<Kind>('month');
   const [year, setYear] = useState(now.getFullYear());
@@ -59,7 +62,7 @@ export function ReportExportModal({ visible, onClose, userEmail }: Props) {
 
   async function generate(send: boolean): Promise<ReportResult | null> {
     const { data, error } = await supabase.functions.invoke<ReportResult>('export-report', {
-      body: { period: kind, year, month: month + 1, send, lang },
+      body: { period: kind, year, month: month + 1, send, lang, owner_id: ownerId },
     });
     if (error) {
       // Erros da função vêm no corpo da resposta; tentamos extrair a mensagem.

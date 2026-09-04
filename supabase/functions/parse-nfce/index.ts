@@ -79,6 +79,13 @@ Deno.serve(async (req) => {
     return json({ error: message }, status);
   };
 
+  // Quem só visualiza o caderno enxerga a notinha, mas não pode mandar ler:
+  // a leitura escreve no caderno alheio e vai buscar dados na SEFAZ.
+  const { data: podeEscrever } = await supabase.rpc('can_write', {
+    p_owner: receipt.user_id,
+  });
+  if (!podeEscrever) return json({ error: dict.http.notAuthenticated }, 403);
+
   const qrUrl: string | null = receipt.qr_url;
   if (!qrUrl) return await fail(dict.nfce.noQr, 400);
 
@@ -95,16 +102,19 @@ Deno.serve(async (req) => {
   const { count } = await supabase
     .from('receipts')
     .select('id', { count: 'exact', head: true })
+    .eq('user_id', receipt.user_id)
     .gte('created_at', dayAgo);
   if ((count ?? 0) > DAILY_LIMIT) {
     return await fail(dict.nfce.dailyLimit, 429);
   }
 
   // A chave é única por nota no país inteiro: se ela já virou gasto, avisamos
-  // em vez de deixar a pessoa lançar a mesma compra duas vezes.
+  // em vez de deixar a pessoa lançar a mesma compra duas vezes. A checagem é
+  // dentro do caderno — nota repetida em cadernos diferentes não é duplicata.
   const { data: jaLancada } = await supabase
     .from('receipts')
     .select('id, expense_id')
+    .eq('user_id', receipt.user_id)
     .eq('access_key', chave)
     .neq('id', receiptId)
     .not('expense_id', 'is', null)

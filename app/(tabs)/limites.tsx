@@ -20,6 +20,7 @@ import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
 import { ConfirmDialog } from '../../src/components/ConfirmDialog';
 import { PressableScale } from '../../src/components/PressableScale';
 import { useData } from '../../src/context/DataContext';
+import { useLedger } from '../../src/context/LedgerContext';
 import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { evaluateBudgets } from '../../src/utils/analytics';
@@ -30,6 +31,7 @@ export default function LimitesScreen() {
   const { colors } = useTheme();
   const t = useT();
   const insets = useSafeAreaInsets();
+  const { canWrite } = useLedger();
   const { budgets, expenses, categories, categoriesWithSubs, setBudget, deleteBudget } =
     useData();
 
@@ -120,17 +122,23 @@ export default function LimitesScreen() {
                       )}
                     </Text>
                   </View>
-                  <Pressable
-                    onPress={() =>
-                      setRemoving({
-                        id: a.budget.id,
-                        label: a.category?.name ?? t.common.generalLimit,
-                      })
-                    }
-                    hitSlop={10}
-                  >
-                    <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.textMuted} />
-                  </Pressable>
+                  {canWrite && (
+                    <Pressable
+                      onPress={() =>
+                        setRemoving({
+                          id: a.budget.id,
+                          label: a.category?.name ?? t.common.generalLimit,
+                        })
+                      }
+                      hitSlop={10}
+                    >
+                      <MaterialCommunityIcons
+                        name="trash-can-outline"
+                        size={20}
+                        color={colors.textMuted}
+                      />
+                    </Pressable>
+                  )}
                 </View>
                 <View style={[styles.barTrack, { backgroundColor: colors.surface }]}>
                   <View
@@ -158,7 +166,9 @@ export default function LimitesScreen() {
         </View>
       )}
 
-      {/* Novo limite */}
+      {/* Novo limite — quem só visualiza o caderno não define teto de gasto. */}
+      {canWrite && (
+      <>
       <Text style={[styles.formTitle, { color: colors.text }]}>{t.limits.newLimit}</Text>
       <View style={[styles.formCard, { backgroundColor: colors.card }]}>
         {/* Período */}
@@ -252,6 +262,8 @@ export default function LimitesScreen() {
           </Text>
         </PressableScale>
       </View>
+      </>
+      )}
     </ScrollView>
 
     <ConfirmDialog

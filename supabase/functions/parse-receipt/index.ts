@@ -116,13 +116,21 @@ Deno.serve(async (req) => {
     return json({ error: message }, status);
   };
 
+  // Quem só visualiza o caderno enxerga a notinha, mas não pode mandar ler:
+  // a leitura escreve no caderno alheio e custa uma chamada de modelo.
+  const { data: podeEscrever } = await supabase.rpc('can_write', {
+    p_owner: receipt.user_id,
+  });
+  if (!podeEscrever) return json({ error: dict.http.notAuthenticated }, 403);
+
   // Cota diária. Conta notinhas criadas nas últimas 24h, não chamadas:
   // reprocessar uma foto que falhou não pode queimar a cota de quem já foi
-  // prejudicado.
+  // prejudicado. A cota é por caderno, não pela união dos compartilhados.
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count, error: countErr } = await supabase
     .from('receipts')
     .select('id', { count: 'exact', head: true })
+    .eq('user_id', receipt.user_id)
     .gte('created_at', dayAgo);
 
   if (!countErr && (count ?? 0) > DAILY_LIMIT) {

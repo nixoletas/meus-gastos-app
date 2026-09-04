@@ -2,7 +2,8 @@
 // Gera um relatório Excel (mensal ou anual) dos gastos do usuário autenticado,
 // envia por e-mail via Resend e devolve o arquivo em base64 para download no cliente.
 //
-// Body: { period: 'month' | 'year', year: number, month?: number (1-12), send?: boolean }
+// Body: { period: 'month' | 'year', year: number, month?: number (1-12), send?: boolean,
+//         owner_id?: string (caderno compartilhado; o próprio quando não vem) }
 // Resposta: { ok, filename, total, count, xlsxBase64 }
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -17,6 +18,8 @@ type Body = {
   send?: boolean; // default true
   /** Idioma do relatório e do e-mail; 'pt-BR' quando não vem. */
   lang?: string;
+  /** Dono do caderno a exportar. Ausente = o caderno de quem chamou. */
+  owner_id?: string;
 };
 
 function json(body: unknown, status = 200) {
@@ -82,15 +85,24 @@ Deno.serve(async (req) => {
 
     const { start, end } = rangeFor(kind, year, month);
 
+    // Qual caderno exportar. Sem o filtro explícito por dono, quem participa de
+    // um caderno compartilhado receberia a união dos dois no mesmo relatório.
+    const ownerId = body.owner_id ?? user.id;
+    if (ownerId !== user.id) {
+      const { data: podeLer } = await supabase.rpc('can_read', { p_owner: ownerId });
+      if (!podeLer) return json({ error: dict.http.invalidSession }, 403);
+    }
+
     // Busca gastos do período + categorias (para nome/cor) + subcompras.
     const [expRes, catRes, itemRes] = await Promise.all([
       supabase
         .from('expenses')
         .select('id, amount, note, occurred_at, category_id, subcategory_id')
+        .eq('user_id', ownerId)
         .gte('occurred_at', start)
         .lte('occurred_at', end)
         .order('occurred_at', { ascending: false }),
-      supabase.from('categories').select('id, name, color'),
+      supabase.from('categories').select('id, name, color').eq('user_id', ownerId),
       // `expenses!inner` filtra pela data do lançamento e ainda traz a
       // categoria de cada item de graça, sem uma segunda viagem ao banco.
       supabase
@@ -99,6 +111,7 @@ Deno.serve(async (req) => {
           'description, quantity, unit, unit_price, total, ' +
             'expenses!inner(occurred_at, category_id), receipts(merchant)'
         )
+        .eq('user_id', ownerId)
         .gte('expenses.occurred_at', start)
         .lte('expenses.occurred_at', end)
         .order('position'),
@@ -139,6 +152,7 @@ Deno.serve(async (req) => {
         const { data, error } = await supabase
           .from('expense_items')
           .select('description, quantity, unit, unit_price, total, expense_id, receipt_id')
+          .eq('user_id', ownerId)
           .in('expense_id', lote)
           .order('position');
         if (error) {

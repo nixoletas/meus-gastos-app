@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { DataProvider } from '../src/context/DataContext';
+import { LedgerProvider } from '../src/context/LedgerContext';
 import { OnboardingProvider, useOnboarding } from '../src/context/OnboardingContext';
 import { I18nProvider } from '../src/i18n';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
@@ -97,6 +98,7 @@ function AuthGate() {
         <Stack.Screen name="login" />
         <Stack.Screen name="config" />
         <Stack.Screen name="legal" />
+        <Stack.Screen name="familia" />
         <Stack.Screen
           name="novo"
           options={{
@@ -156,10 +158,12 @@ export default function RootLayout() {
           <I18nProvider>
             <OnboardingProvider>
               <AuthProvider>
-                <DataProvider>
-                  <ThemedStatusBar />
-                  <AuthGate />
-                </DataProvider>
+                <LedgerProvider>
+                  <DataProvider>
+                    <ThemedStatusBar />
+                    <AuthGate />
+                  </DataProvider>
+                </LedgerProvider>
               </AuthProvider>
             </OnboardingProvider>
           </I18nProvider>

@@ -137,13 +137,18 @@ export function takePendingScan(): string | null {
   return value;
 }
 
-/** Sobe a foto e cria a linha da notinha (ainda sem itens). */
+/**
+ * Sobe a foto e cria a linha da notinha (ainda sem itens).
+ *
+ * `ownerId` é o dono do caderno, que nem sempre é quem está mexendo: num
+ * caderno compartilhado, a foto de quem edita vai para a pasta do dono.
+ */
 export async function uploadReceipt(
-  userId: string,
+  ownerId: string,
   base64: string,
   expenseId: string | null
 ): Promise<Receipt> {
-  const path = `${userId}/${randomName()}`;
+  const path = `${ownerId}/${randomName()}`;
   const { error: uploadErr } = await supabase.storage
     .from('receipts')
     .upload(path, base64ToBytes(base64), {
@@ -155,7 +160,7 @@ export async function uploadReceipt(
   const { data, error } = await supabase
     .from('receipts')
     .insert({
-      user_id: userId,
+      user_id: ownerId,
       expense_id: expenseId,
       storage_path: path,
       status: 'pending',
@@ -172,11 +177,11 @@ export async function uploadReceipt(
 }
 
 /** Cria a notinha a partir do QR Code, sem foto nenhuma. */
-export async function createQrReceipt(userId: string, qrUrl: string): Promise<Receipt> {
+export async function createQrReceipt(ownerId: string, qrUrl: string): Promise<Receipt> {
   const { data, error } = await supabase
     .from('receipts')
     .insert({
-      user_id: userId,
+      user_id: ownerId,
       expense_id: null,
       source: 'qrcode',
       qr_url: qrUrl,

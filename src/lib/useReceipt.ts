@@ -28,14 +28,15 @@ import {
 export type ReceiptPhase = 'idle' | 'uploading' | 'reading' | 'ready' | 'failed';
 
 type Options = {
-  userId: string | null;
+  /** Dono do caderno em que a notinha vai ser gravada. */
+  ownerId: string | null;
   /** Gasto sendo editado; nulo quando é lançamento novo. */
   expenseId: string | null;
   /** Chamado quando o OCR termina — a tela usa para preencher valor e data. */
   onParsed?: (result: ParseResult) => void;
 };
 
-export function useReceipt({ userId, expenseId, onParsed }: Options) {
+export function useReceipt({ ownerId, expenseId, onParsed }: Options) {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [phase, setPhase] = useState<ReceiptPhase>('idle');
@@ -112,7 +113,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
    */
   const attachQr = useCallback(
     async (qrUrl: string) => {
-      if (!userId) return;
+      if (!ownerId) return;
       try {
         setError(null);
         const previous = receipt;
@@ -120,7 +121,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
         setMismatch(false);
         setDuplicate(null);
 
-        const created = await createQrReceipt(userId, qrUrl);
+        const created = await createQrReceipt(ownerId, qrUrl);
         pendingRef.current = created;
         setReceipt(created);
         setPhotoUrl(null);
@@ -132,12 +133,12 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
         setError(err instanceof Error ? err.message : tNow().errors.readQr);
       }
     },
-    [userId, receipt, runParse]
+    [ownerId, receipt, runParse]
   );
 
   const attach = useCallback(
     async (source: ReceiptSource) => {
-      if (!userId) return;
+      if (!ownerId) return;
       try {
         setError(null);
         const photo = await pickReceiptPhoto(source);
@@ -150,7 +151,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
         setMismatch(false);
         setDuplicate(null);
 
-        const created = await uploadReceipt(userId, photo.base64, null);
+        const created = await uploadReceipt(ownerId, photo.base64, null);
         pendingRef.current = created;
         setReceipt(created);
         if (previous) void discardReceipt(previous);
@@ -161,7 +162,7 @@ export function useReceipt({ userId, expenseId, onParsed }: Options) {
         setError(err instanceof Error ? err.message : tNow().errors.readReceipt);
       }
     },
-    [userId, receipt, runParse]
+    [ownerId, receipt, runParse]
   );
 
   const retry = useCallback(async () => {

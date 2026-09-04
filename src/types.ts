@@ -96,6 +96,29 @@ export type Budget = {
   created_at: string;
 };
 
+/**
+ * Convite/vínculo de alguém da família a um caderno de gastos.
+ *
+ * O caderno continua sendo do dono (`owner_id`): quem entra por aqui lê os
+ * mesmos lançamentos e, quando `role` é 'editor', escreve neles — sem nunca
+ * virar dono de nada. `member_id` fica nulo até a pessoa entrar com a conta
+ * Google do e-mail convidado.
+ */
+export type HouseholdMember = {
+  id: string;
+  owner_id: string;
+  member_id: string | null;
+  invited_email: string;
+  role: 'viewer' | 'editor';
+  status: 'pending' | 'active' | 'revoked';
+  owner_email: string;
+  owner_name: string | null;
+  member_name: string | null;
+  created_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+};
+
 /** Categoria já combinada com suas subcategorias para uso na UI. */
 export type CategoryWithSubs = Category & {
   subcategories: Category[];

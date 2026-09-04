@@ -138,6 +138,57 @@ export const en: Dict = {
     deleteAnyway: 'Delete my account anyway',
   },
 
+  sharing: {
+    section: 'FAMILY',
+    title: 'Share my expenses',
+    subtitleNobody: 'Nobody follows your expenses',
+    subtitleCount: (n: number) =>
+      n === 1 ? '1 person follows your expenses' : `${n} people follow your expenses`,
+    subtitleViewing: (name: string) => `Viewing ${name}'s expenses`,
+
+    myLedgers: 'LEDGERS',
+    myLedger: 'My expenses',
+    active: 'Open now',
+    roleOwner: 'You own it',
+    roleViewer: 'View only',
+    roleEditor: 'Can edit',
+    leave: 'Leave this ledger',
+    leaveConfirmTitle: 'Leave the ledger?',
+    leaveConfirmBody: (name: string) =>
+      `You will stop seeing ${name}'s expenses. Your own expenses are untouched.`,
+
+    whoSees: 'WHO SEES MY EXPENSES',
+    inviteEmailLabel: 'E-mail of the person who will follow along',
+    inviteEmailPlaceholder: 'name@gmail.com',
+    inviteHint:
+      'It must be the same e-mail of the Google account they sign in with. Access shows up for them on their next sign-in.',
+    invitePermission: 'Permission',
+    inviteButton: 'Invite',
+    inviting: 'Inviting…',
+    pending: 'Waiting to join',
+    emptyMembers: 'Nobody here yet. Invite someone from your family.',
+    revoke: 'Remove access',
+    revokeConfirmTitle: 'Remove access?',
+    revokeConfirmBody: (name: string) =>
+      `${name} stops seeing your expenses right away. Entries they created stay in your ledger.`,
+
+    viewingBanner: (name: string) => `Viewing ${name}'s expenses`,
+    readOnlyBadge: 'view only',
+    revokedNotice: (name: string) =>
+      name
+        ? `${name} ended your access. You are back on your own expenses.`
+        : 'Your access to that ledger ended. You are back on your own expenses.',
+
+    errors: {
+      invalidEmail: 'Invalid e-mail.',
+      selfInvite: "That's your own e-mail.",
+      limit: 'You have already invited the maximum number of people.',
+      notFound: 'Invite not found. Refresh the screen.',
+      noPermission: "You don't have permission for that.",
+      generic: "Couldn't complete. Please try again.",
+    },
+  },
+
   expenseRow: {
     itemsCount: (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`,
     noItems: 'This entry has no items.',

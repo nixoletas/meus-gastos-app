@@ -4,6 +4,8 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '../../src/components/PressableScale';
+import { SharedLedgerBanner } from '../../src/components/SharedLedgerBanner';
+import { useLedger } from '../../src/context/LedgerContext';
 import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 
@@ -11,6 +13,7 @@ export default function TabsLayout() {
   const { colors } = useTheme();
   const t = useT();
   const router = useRouter();
+  const { canWrite } = useLedger();
   const insets = useSafeAreaInsets();
   // No Android, garante uma folga mínima sobre a navbar do sistema mesmo
   // quando o inset reportado é pequeno.
@@ -19,6 +22,7 @@ export default function TabsLayout() {
 
   return (
     <View style={{ flex: 1 }}>
+      <SharedLedgerBanner />
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -82,7 +86,9 @@ export default function TabsLayout() {
         />
       </Tabs>
 
-      {/* Botão flutuante para lançar um gasto rapidamente, presente em todas as abas. */}
+      {/* Botão flutuante para lançar um gasto rapidamente, presente em todas as
+          abas — some no caderno em que só se pode olhar. */}
+      {canWrite && (
       <PressableScale
         onPress={() => {
           router.push('/novo');
@@ -99,6 +105,7 @@ export default function TabsLayout() {
       >
         <MaterialCommunityIcons name="plus" size={32} color={colors.onPrimary} />
       </PressableScale>
+      )}
     </View>
   );
 }

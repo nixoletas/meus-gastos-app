@@ -12,6 +12,7 @@ import { AppIconName } from '../data/icons';
 import { supabase } from '../lib/supabase';
 import { Budget, Category, CategoryWithSubs, DraftItem, Expense } from '../types';
 import { useAuth } from './AuthContext';
+import { useLedger } from './LedgerContext';
 
 type NewExpense = {
   amount: number;
@@ -91,6 +92,9 @@ const upsertById = <T extends { id: string }>(list: T[], row: T) => {
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
+  // Dono do caderno aberto: o próprio, ou o de quem compartilhou comigo. É ele
+  // que carimba `user_id` em tudo que se grava e que filtra tudo que se lê.
+  const { ownerId, canWrite } = useLedger();
 
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
@@ -148,22 +152,36 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadAll = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !ownerId) return;
     setLoading(true);
     try {
+      // O filtro por dono é obrigatório: a RLS agora libera também os cadernos
+      // compartilhados, então sem ele a tela viria com a união de todos.
       const [catRes, expRes, budRes, settingsRes] = await Promise.all([
-        supabase.from('categories').select('*').order('created_at'),
+        supabase
+          .from('categories')
+          .select('*')
+          .eq('user_id', ownerId)
+          .order('created_at'),
         supabase
           .from('expenses')
           .select('*')
+          .eq('user_id', ownerId)
           .order('occurred_at', { ascending: false })
           .order('created_at', { ascending: false }),
-        supabase.from('budgets').select('*'),
-        supabase.from('user_settings').select('hide_value').maybeSingle(),
+        supabase.from('budgets').select('*').eq('user_id', ownerId),
+        // Preferência de quem está olhando, não do dono do caderno.
+        supabase
+          .from('user_settings')
+          .select('hide_value')
+          .eq('user_id', userId)
+          .maybeSingle(),
       ]);
 
       let cats = (catRes.data ?? []) as Category[];
-      if (!catRes.error && cats.length === 0) {
+      // Caderno de outra pessoa vazio não se semeia: as categorias sairiam
+      // com o `user_id` de quem está visitando.
+      if (!catRes.error && cats.length === 0 && ownerId === userId) {
         cats = await seedDefaults(userId);
       }
 
@@ -174,10 +192,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [userId, seedDefaults]);
+  }, [userId, ownerId, seedDefaults]);
 
   useEffect(() => {
-    if (userId) {
+    if (userId && ownerId) {
       loadAll();
     } else {
       setCategories([]);
@@ -186,16 +204,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setHideValueState(false);
       setLoading(false);
     }
-  }, [userId, loadAll]);
+  }, [userId, ownerId, loadAll]);
 
   // Sincronização em tempo real: reflete mudanças feitas em outros dispositivos.
   // A deduplicação por id evita conflito com as atualizações otimistas locais.
   useEffect(() => {
-    if (!userId) return;
-    const filter = `user_id=eq.${userId}`;
+    if (!userId || !ownerId) return;
+    const filter = `user_id=eq.${ownerId}`;
 
     const channel = supabase
-      .channel('realtime-meus-gastos')
+      .channel(`realtime-meus-gastos-${ownerId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'expenses', filter },
@@ -238,7 +256,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_settings', filter },
+        // Preferência é pessoal: escuta a própria linha, não a do dono.
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_settings',
+          filter: `user_id=eq.${userId}`,
+        },
         (payload) => {
           if (payload.eventType === 'DELETE') return;
           setHideValueState((payload.new as { hide_value: boolean }).hide_value);
@@ -249,7 +273,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, ownerId]);
 
   const categoriesWithSubs = useMemo<CategoryWithSubs[]>(() => {
     const parents = categories.filter((c) => c.parent_id === null);
@@ -266,10 +290,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const addExpense = useCallback(
     async (input: NewExpense): Promise<Expense | null> => {
-      if (!userId) return null;
+      if (!ownerId || !canWrite) return null;
       const { data, error } = await supabase
         .from('expenses')
-        .insert({ ...input, user_id: userId })
+        .insert({ ...input, user_id: ownerId })
         .select()
         .single();
       if (error || !data) return null;
@@ -277,12 +301,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setExpenses((prev) => sortExpenses(upsertById(prev, expense)));
       return expense;
     },
-    [userId]
+    [ownerId, canWrite]
   );
 
   const saveExpenseWithItems = useCallback(
     async (input: ExpenseWithItemsInput): Promise<Expense | null> => {
-      if (!userId) return null;
+      if (!ownerId || !canWrite) return null;
       const { data, error } = await supabase.rpc('save_expense_with_items', {
         p_expense: input.expense,
         p_items: input.items.map((item, index) => ({
@@ -297,53 +321,65 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         })),
         p_receipt_id: input.receiptId ?? null,
         p_expense_id: input.expenseId ?? null,
+        p_owner_id: ownerId,
       });
       if (error || !data) return null;
       const expense = data as Expense;
       setExpenses((prev) => sortExpenses(upsertById(prev, expense)));
       return expense;
     },
-    [userId]
+    [ownerId, canWrite]
   );
 
   const updateExpense = useCallback(
     async (id: string, input: Partial<NewExpense>) => {
+      if (!ownerId || !canWrite) return;
       const { data, error } = await supabase
         .from('expenses')
         .update(input)
         .eq('id', id)
+        .eq('user_id', ownerId)
         .select()
         .single();
       if (error || !data) return;
       setExpenses((prev) => sortExpenses(upsertById(prev, data as Expense)));
     },
-    []
+    [ownerId, canWrite]
   );
 
-  const deleteExpense = useCallback(async (id: string) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  const deleteExpense = useCallback(
+    async (id: string) => {
+      if (!ownerId || !canWrite) return;
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
 
-    // O cascade do banco apaga a linha da notinha, mas não o arquivo no
-    // Storage — esse só sai pela API, e antes de perder a referência a ele.
-    const { data: receipts } = await supabase
-      .from('receipts')
-      .select('storage_path')
-      .eq('expense_id', id);
-    if (receipts?.length) {
-      await supabase.storage
+      // O cascade do banco apaga a linha da notinha, mas não o arquivo no
+      // Storage — esse só sai pela API, e antes de perder a referência a ele.
+      const { data: receipts } = await supabase
         .from('receipts')
-        .remove(receipts.map((r) => (r as { storage_path: string }).storage_path));
-    }
+        .select('storage_path')
+        .eq('user_id', ownerId)
+        .eq('expense_id', id);
+      if (receipts?.length) {
+        await supabase.storage
+          .from('receipts')
+          .remove(
+            receipts
+              .map((r) => (r as { storage_path: string | null }).storage_path)
+              .filter((path): path is string => !!path)
+          );
+      }
 
-    await supabase.from('expenses').delete().eq('id', id);
-  }, []);
+      await supabase.from('expenses').delete().eq('id', id).eq('user_id', ownerId);
+    },
+    [ownerId, canWrite]
+  );
 
   const addCategory = useCallback(
     async (input: CategoryInput): Promise<Category | null> => {
-      if (!userId) return null;
+      if (!ownerId || !canWrite) return null;
       const { data, error } = await supabase
         .from('categories')
-        .insert({ ...input, user_id: userId })
+        .insert({ ...input, user_id: ownerId })
         .select()
         .single();
       if (error || !data) return null;
@@ -351,32 +387,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setCategories((prev) => upsertById(prev, cat));
       return cat;
     },
-    [userId]
+    [ownerId, canWrite]
   );
 
   const updateCategory = useCallback(
     async (id: string, input: Partial<CategoryInput>) => {
+      if (!ownerId || !canWrite) return;
       const { data, error } = await supabase
         .from('categories')
         .update(input)
         .eq('id', id)
+        .eq('user_id', ownerId)
         .select()
         .single();
       if (error || !data) return;
       setCategories((prev) => upsertById(prev, data as Category));
     },
-    []
+    [ownerId, canWrite]
   );
 
-  const deleteCategory = useCallback(async (id: string) => {
-    // O cascade no banco remove subcategorias; refletimos isso localmente.
-    setCategories((prev) => prev.filter((c) => c.id !== id && c.parent_id !== id));
-    await supabase.from('categories').delete().eq('id', id);
-  }, []);
+  const deleteCategory = useCallback(
+    async (id: string) => {
+      if (!ownerId || !canWrite) return;
+      // O cascade no banco remove subcategorias; refletimos isso localmente.
+      setCategories((prev) => prev.filter((c) => c.id !== id && c.parent_id !== id));
+      await supabase.from('categories').delete().eq('id', id).eq('user_id', ownerId);
+    },
+    [ownerId, canWrite]
+  );
 
   const setBudget = useCallback<DataContextValue['setBudget']>(
     async (input) => {
-      if (!userId) return;
+      if (!ownerId || !canWrite) return;
       // Procura um orçamento já existente para a mesma categoria + período.
       const existing = budgets.find(
         (b) => b.category_id === input.category_id && b.period === input.period
@@ -387,7 +429,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             .from('budgets')
             .update({ limit_amount: input.limit_amount })
             .eq('id', existing.id)
-        : supabase.from('budgets').insert({ ...input, user_id: userId });
+            .eq('user_id', ownerId)
+        : supabase.from('budgets').insert({ ...input, user_id: ownerId });
 
       const { data, error } = await query.select().single();
       if (error || !data) return;
@@ -401,13 +444,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         return [...without, budget];
       });
     },
-    [userId, budgets]
+    [ownerId, canWrite, budgets]
   );
 
-  const deleteBudget = useCallback(async (id: string) => {
-    setBudgets((prev) => prev.filter((b) => b.id !== id));
-    await supabase.from('budgets').delete().eq('id', id);
-  }, []);
+  const deleteBudget = useCallback(
+    async (id: string) => {
+      if (!ownerId || !canWrite) return;
+      setBudgets((prev) => prev.filter((b) => b.id !== id));
+      await supabase.from('budgets').delete().eq('id', id).eq('user_id', ownerId);
+    },
+    [ownerId, canWrite]
+  );
 
   const setHideValue = useCallback(
     async (value: boolean) => {

@@ -21,6 +21,7 @@ import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { IconPicker } from '../src/components/IconPicker';
 import { PressableScale } from '../src/components/PressableScale';
 import { useData } from '../src/context/DataContext';
+import { useLedger } from '../src/context/LedgerContext';
 import { AppIconName } from '../src/data/icons';
 import { useT } from '../src/i18n';
 import { useTheme } from '../src/theme/ThemeContext';
@@ -68,7 +69,9 @@ export default function CategoriaScreen() {
       ? t.categoryForm.newSub
       : t.categoryForm.newCat;
 
-  const canSave = name.trim().length > 0 && !saving;
+  const { canWrite } = useLedger();
+  // Caderno de outra pessoa em modo leitura: a tela vira detalhe da categoria.
+  const canSave = name.trim().length > 0 && !saving && canWrite;
 
   async function handleSave() {
     if (!canSave) {
@@ -108,7 +111,7 @@ export default function CategoriaScreen() {
           <MaterialCommunityIcons name="close" size={26} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
-        {editing ? (
+        {editing && canWrite ? (
           <Pressable onPress={() => setConfirmOpen(true)} hitSlop={12} style={styles.headerBtn}>
             <MaterialCommunityIcons name="trash-can-outline" size={24} color={colors.danger} />
           </Pressable>

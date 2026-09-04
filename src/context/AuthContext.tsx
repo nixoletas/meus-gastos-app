@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { tNow } from '../i18n';
+import { clearActiveLedger } from '../lib/activeLedger';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 // Client ID Web do Google (audiência do ID token). O client Android (pacote + SHA-1)
@@ -90,6 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Antes de derrubar a sessão: quem entrar depois começa no próprio caderno.
+    await clearActiveLedger();
     try {
       await GoogleSignin.signOut();
     } catch {
