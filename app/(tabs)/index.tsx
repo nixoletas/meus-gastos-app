@@ -295,13 +295,45 @@ export default function HomeScreen() {
                     <View
                       style={[
                         styles.barFill,
-                        {
-                          width: `${Math.min(Math.max(b.ratio * 100, 3), 100)}%`,
-                          backgroundColor: barColor,
-                        },
+                        { width: `${Math.min(Math.max(b.ratio * 100, 3), 100)}%` },
                       ]}
-                    />
+                    >
+                      {b.segments.length > 0 ? (
+                        // Limite geral: cada categoria pinta sua fatia do gasto.
+                        b.segments.map((s) => (
+                          <View
+                            key={s.categoryId ?? '__none__'}
+                            style={{
+                              width: `${s.share * 100}%`,
+                              height: '100%',
+                              backgroundColor: s.category?.color ?? colors.textMuted,
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <View style={{ flex: 1, backgroundColor: barColor }} />
+                      )}
+                    </View>
                   </View>
+                  {b.segments.length > 0 && (
+                    <View style={styles.legend}>
+                      {b.segments.map((s) => (
+                        <View key={s.categoryId ?? '__none__'} style={styles.legendItem}>
+                          <View
+                            style={[
+                              styles.legendDot,
+                              {
+                                backgroundColor: s.category?.color ?? colors.textMuted,
+                              },
+                            ]}
+                          />
+                          <Text style={[styles.legendText, { color: colors.textMuted }]}>
+                            {s.category?.name ?? t.common.noCategory} {Math.round(s.share * 100)}%
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                   <Text style={[styles.budgetRemaining, { color: barColor }]}>
                     {b.spent >= b.budget.limit_amount
                       ? t.home.overBy(formatBRL(b.spent - b.budget.limit_amount))
@@ -510,7 +542,11 @@ const styles = StyleSheet.create({
   catName: { fontSize: 15, fontWeight: '600', flex: 1, marginRight: 8 },
   catValue: { fontSize: 15, fontWeight: '700' },
   barTrack: { height: 7, borderRadius: 4, overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: 4 },
+  barFill: { height: '100%', borderRadius: 4, flexDirection: 'row', overflow: 'hidden' },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 3, marginTop: 6 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 7, height: 7, borderRadius: 4 },
+  legendText: { fontSize: 11.5, fontWeight: '600' },
   budgetRemaining: { fontSize: 12.5, fontWeight: '600', marginTop: 4 },
   empty: { alignItems: 'center', paddingTop: 50, gap: 12 },
   emptyIcon: {

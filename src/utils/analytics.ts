@@ -31,6 +31,24 @@ export function expensesForPeriod(
 }
 
 /**
+ * Resolve a categoria-mãe de um lançamento (subcategoria -> sua mãe).
+ * null quando o gasto não tem categoria.
+ */
+function rootCategoryId(
+  e: Expense,
+  byId: Map<string, Category>
+): string | null {
+  let rootId: string | null = e.category_id;
+  const cat = e.category_id ? byId.get(e.category_id) : undefined;
+  if (cat?.parent_id) rootId = cat.parent_id;
+  if (!cat && e.subcategory_id) {
+    const sub = byId.get(e.subcategory_id);
+    rootId = sub?.parent_id ?? e.subcategory_id;
+  }
+  return rootId;
+}
+
+/**
  * Agrupa os gastos do período pela categoria-mãe.
  * Subcategorias somam no total da categoria-mãe correspondente.
  */
@@ -46,14 +64,7 @@ export function totalsByCategory(
   for (const e of expenses) {
     if (!isInPeriod(e.occurred_at, ref, period)) continue;
 
-    // Resolve a categoria-mãe (subcategoria -> sua mãe).
-    let rootId: string | null = e.category_id;
-    const cat = e.category_id ? byId.get(e.category_id) : undefined;
-    if (cat?.parent_id) rootId = cat.parent_id;
-    if (!cat && e.subcategory_id) {
-      const sub = byId.get(e.subcategory_id);
-      rootId = sub?.parent_id ?? e.subcategory_id;
-    }
+    const rootId = rootCategoryId(e, byId);
 
     const bucket = buckets.get(rootId) ?? { total: 0, count: 0 };
     bucket.total += e.amount;
@@ -167,12 +178,24 @@ export function subcategoryExpenses(
     );
 }
 
+export type BudgetSegment = {
+  categoryId: string | null; // null = gasto sem categoria
+  category: Category | undefined;
+  amount: number;
+  share: number; // 0..1 sobre o gasto do orçamento
+};
+
 export type BudgetAlert = {
   budget: Budget;
   category: Category | undefined;
   spent: number;
   ratio: number; // gasto / limite
   level: 'ok' | 'warning' | 'exceeded';
+  /**
+   * Composição do gasto por categoria-mãe, do maior pro menor. Só o limite
+   * geral tem segmentos; num limite de categoria a barra já é de uma só cor.
+   */
+  segments: BudgetSegment[];
 };
 
 /**
@@ -189,13 +212,19 @@ export function evaluateBudgets(
 
   return budgets.map((budget) => {
     const period: Period = budget.period === 'year' ? 'year' : 'month';
+    const isGeneral = budget.category_id === null;
 
     let spent = 0;
+    // Composição por categoria-mãe: alimenta a barra multicolorida do geral.
+    const buckets = new Map<string | null, number>();
+
     for (const e of expenses) {
       if (!isInPeriod(e.occurred_at, ref, period)) continue;
 
-      if (budget.category_id === null) {
+      if (isGeneral) {
         spent += e.amount;
+        const rootId = rootCategoryId(e, byId);
+        buckets.set(rootId, (buckets.get(rootId) ?? 0) + e.amount);
         continue;
       }
 
@@ -212,12 +241,22 @@ export function evaluateBudgets(
     const level: BudgetAlert['level'] =
       ratio >= 1 ? 'exceeded' : ratio >= 0.8 ? 'warning' : 'ok';
 
+    const segments: BudgetSegment[] = [...buckets.entries()]
+      .map(([categoryId, amount]) => ({
+        categoryId,
+        category: categoryId ? byId.get(categoryId) : undefined,
+        amount,
+        share: spent > 0 ? amount / spent : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
     return {
       budget,
       category: budget.category_id ? byId.get(budget.category_id) : undefined,
       spent,
       ratio,
       level,
+      segments,
     };
   });
 }

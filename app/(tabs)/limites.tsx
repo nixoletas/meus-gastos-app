@@ -141,13 +141,43 @@ export default function LimitesScreen() {
                   )}
                 </View>
                 <View style={[styles.barTrack, { backgroundColor: colors.surface }]}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      { width: `${Math.min(a.ratio * 100, 100)}%`, backgroundColor: color },
-                    ]}
-                  />
+                  <View style={[styles.barFill, { width: `${Math.min(a.ratio * 100, 100)}%` }]}>
+                    {a.segments.length > 0 ? (
+                      // Limite geral: cada categoria pinta sua fatia do gasto.
+                      a.segments.map((s) => (
+                        <View
+                          key={s.categoryId ?? '__none__'}
+                          style={{
+                            width: `${s.share * 100}%`,
+                            height: '100%',
+                            backgroundColor: s.category?.color ?? colors.textMuted,
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <View style={{ flex: 1, backgroundColor: color }} />
+                    )}
+                  </View>
                 </View>
+                {a.segments.length > 0 && (
+                  <View style={styles.legend}>
+                    {a.segments.map((s) => (
+                      <View key={s.categoryId ?? '__none__'} style={styles.legendItem}>
+                        <View
+                          style={[
+                            styles.legendDot,
+                            {
+                              backgroundColor: s.category?.color ?? colors.textMuted,
+                            },
+                          ]}
+                        />
+                        <Text style={[styles.legendText, { color: colors.textMuted }]}>
+                          {s.category?.name ?? t.common.noCategory} {Math.round(s.share * 100)}%
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
                 <View style={styles.percentRow}>
                   <Text style={[styles.percent, { color }]}>
                     {t.limits.usedPercent(Math.round(a.ratio * 100))}
@@ -306,7 +336,11 @@ const styles = StyleSheet.create({
   budgetName: { fontSize: 16, fontWeight: '700' },
   budgetSub: { fontSize: 13, marginTop: 2 },
   barTrack: { height: 8, borderRadius: 5, overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: 5 },
+  barFill: { height: '100%', borderRadius: 5, flexDirection: 'row', overflow: 'hidden' },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 4 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontSize: 12, fontWeight: '600' },
   percentRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   percent: { fontSize: 13, fontWeight: '600' },
   remaining: { fontSize: 13, fontWeight: '600' },
