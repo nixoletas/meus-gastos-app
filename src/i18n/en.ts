@@ -34,6 +34,8 @@ export const en: Dict = {
     charts: 'Charts',
     categories: 'Categories',
     limits: 'Limits',
+    family: 'Family',
+    more: 'More',
     settings: 'Settings',
   },
 

@@ -76,14 +76,17 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="ajustes"
+          name="mais"
           options={{
-            title: t.tabs.settings,
+            title: t.tabs.more,
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="cog" size={size} color={color} />
+              <MaterialCommunityIcons name="dots-horizontal" size={size} color={color} />
             ),
           }}
         />
+        {/* Ajustes continua sendo rota, mas entra pelo "Mais" — a barra só
+            comporta cinco abas e configuração não é uso do dia. */}
+        <Tabs.Screen name="ajustes" options={{ href: null, title: t.tabs.settings }} />
       </Tabs>
 
       {/* Botão flutuante para lançar um gasto rapidamente, presente em todas as

@@ -37,6 +37,8 @@ export const pt = {
     charts: 'Gráficos',
     categories: 'Categorias',
     limits: 'Limites',
+    family: 'Família',
+    more: 'Mais',
     settings: 'Ajustes',
   },
 

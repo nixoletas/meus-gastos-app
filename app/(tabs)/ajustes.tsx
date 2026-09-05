@@ -19,9 +19,7 @@ import { Text, TextInput } from '../../src/theme/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { PressableScale } from '../../src/components/PressableScale';
-import { ReportExportModal } from '../../src/components/ReportExportModal';
 import { useAuth } from '../../src/context/AuthContext';
-import { useLedger } from '../../src/context/LedgerContext';
 import { useI18n } from '../../src/i18n';
 import { LANG_LABELS, LANGS } from '../../src/i18n/active';
 import { CONTACT_EMAIL, FEEDBACK_FORM_URL } from '../../src/legal/content';
@@ -31,16 +29,6 @@ export default function AjustesScreen() {
   const { colors, preference, setPreference } = useTheme();
   const { t, lang, setLang } = useI18n();
   const { session, signOut, deleteAccount } = useAuth();
-  const { members, isShared, activeLedger } = useLedger();
-
-  // Resumo da linha de Família: de quem é o caderno aberto ou quantas pessoas
-  // acompanham o meu.
-  const ativos = members.filter((m) => m.status === 'active').length;
-  const resumoFamilia = isShared
-    ? t.sharing.subtitleViewing(activeLedger?.ownerName || activeLedger?.ownerEmail || '')
-    : ativos === 0
-      ? t.sharing.subtitleNobody
-      : t.sharing.subtitleCount(ativos);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
@@ -48,7 +36,6 @@ export default function AjustesScreen() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [emailCopied, setEmailCopied] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
   const copyAnim = useRef(new Animated.Value(0)).current;
 
   // Tocar na aba já ativa volta ao topo em vez de não fazer nada.
@@ -222,46 +209,6 @@ export default function AjustesScreen() {
         >
           <MaterialCommunityIcons name="logout" size={20} color={colors.text} />
           <Text style={[styles.logoutText, { color: colors.text }]}>{t.settings.signOut}</Text>
-        </Pressable>
-      </View>
-
-      {/* Família: quem mais acompanha estes gastos, e de quem eu acompanho. */}
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-        {t.sharing.section}
-      </Text>
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <Pressable onPress={() => router.push('/familia')} style={styles.reportRow}>
-          <View style={[styles.linkIcon, { backgroundColor: colors.primarySoft }]}>
-            <MaterialCommunityIcons name="account-multiple-outline" size={22} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.linkTitle, { color: colors.text }]}>{t.sharing.title}</Text>
-            <Text style={[styles.linkSub, { color: colors.textMuted }]} numberOfLines={1}>
-              {resumoFamilia}
-            </Text>
-          </View>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
-        </Pressable>
-      </View>
-
-      {/* Relatórios */}
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-        {t.settings.reports}
-      </Text>
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <Pressable onPress={() => setReportOpen(true)} style={styles.reportRow}>
-          <View style={[styles.linkIcon, { backgroundColor: colors.primarySoft }]}>
-            <MaterialCommunityIcons name="file-excel" size={22} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.linkTitle, { color: colors.text }]}>
-              {t.settings.exportExcel}
-            </Text>
-            <Text style={[styles.linkSub, { color: colors.textMuted }]} numberOfLines={1}>
-              {t.settings.exportExcelSub}
-            </Text>
-          </View>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
         </Pressable>
       </View>
 
@@ -439,11 +386,6 @@ export default function AjustesScreen() {
         </View>
       </Modal>
 
-      <ReportExportModal
-        visible={reportOpen}
-        onClose={() => setReportOpen(false)}
-        userEmail={session?.user.email}
-      />
     </ScrollView>
   );
 }
