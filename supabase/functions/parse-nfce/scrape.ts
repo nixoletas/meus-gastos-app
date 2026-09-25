@@ -1,7 +1,7 @@
 // Leitura da página de consulta da NFC-e.
 //
 // A maioria das UFs publica a "consulta completa" no layout de referência do
-// ENCAT (tabela `#tabResult`, uma linha por item, com as classes `txtTit`,
+// ENCAT (tabela `#tabResult`, uma linha por item, com as classes `txtTit`/`txtTit2`,
 // `Rqtd`, `RUN`, `RvlUnit` e `valor`). Quem fugiu desse layout cai no leitor
 // genérico, que trabalha em cima do texto puro da página.
 //
@@ -85,7 +85,9 @@ function itensDaTabela(root: ReturnType<typeof parse>): ParsedItem[] {
   const itens: ParsedItem[] = [];
 
   for (const linha of root.querySelectorAll('#tabResult tr')) {
-    const descricao = texto(linha.querySelector('.txtTit'));
+    // SP (e outros) marcam a descrição com `txtTit2`; o `td.txtTit` da mesma
+    // linha é a coluna "Vl. Total", então só vale o `span`.
+    const descricao = texto(linha.querySelector('span.txtTit, span.txtTit2'));
     const total = moeda(texto(linha.querySelector('.valor')));
     if (!descricao || total === null) continue;
 

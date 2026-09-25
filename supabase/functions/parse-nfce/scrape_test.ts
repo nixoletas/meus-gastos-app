@@ -2,6 +2,7 @@
 // e contra uma página "fora do padrão" (para exercitar o leitor genérico).
 import { lerPaginaNfce } from './scrape.ts';
 import { chaveDaUrl, chaveValida, portalPermitido } from './chave.ts';
+import { paraHttps } from './fetch.ts';
 
 const referencia = `
 <html><body>
@@ -67,6 +68,28 @@ check('referência: total', a.total === 22.27, String(a.total));
 check('referência: pagamento', a.payment_method === 'debito', String(a.payment_method));
 check('referência: emissão', a.issued_at === '2026-08-24T19:32:05', String(a.issued_at));
 
+// ---- SP: descrição em `txtTit2`, "Vl. Total" como rótulo da coluna
+const sp = `
+<html><head><meta charset="iso-8859-1"></head><body>
+<div class="txtTopo">MERCADO PAULISTA LTDA</div>
+<table id="tabResult">
+  <tr id="Item + 1">
+    <td valign="top"><span class="txtTit2">ARROZ TIPO 1 5KG</span>
+        <span class="RCod">(Código: 7891)</span><br>
+        <span class="Rqtd"><strong>Qtde.:</strong>2</span>
+        <span class="RUN"><strong>UN: </strong>UN</span>
+        <span class="RvlUnit"><strong>Vl. Unit.:</strong>&nbsp;27,90</span></td>
+    <td align="right" valign="top" class="txtTit noWrap">Vl. Total<br><span class="valor">55,80</span></td>
+  </tr>
+</table>
+<div id="linhaTotal">Valor a pagar R$: <span class="totalNumb txtMax">55,80</span></div>
+</body></html>`;
+const s = lerPaginaNfce(sp);
+check('SP: 1 item', s.items.length === 1, String(s.items.length));
+check('SP: descrição', s.items[0]?.description === 'ARROZ TIPO 1 5KG', String(s.items[0]?.description));
+check('SP: quantidade', s.items[0]?.quantity === 2, String(s.items[0]?.quantity));
+check('SP: total do item', s.items[0]?.total === 55.8, String(s.items[0]?.total));
+
 // ---- fora do padrão (leitor genérico)
 const b = lerPaginaNfce(foraDoPadrao);
 check('genérico: 2 itens', b.items.length === 2, String(b.items.length));
@@ -80,6 +103,11 @@ const qr =
 const chave = chaveDaUrl(qr);
 check('chave extraída do QR', chave?.length === 44, String(chave));
 check('portal .gov.br permitido', portalPermitido(qr));
+const qrSp =
+  'https://www.nfce.fazenda.sp.gov.br/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx?p=35260947584186000218650020001446841289089167|2|1|3|C120B6F6475848D46B8250F3BD0E200D184E74FE';
+check('SP: portal permitido', portalPermitido(qrSp));
+check('SP: chave válida', chaveValida(chaveDaUrl(qrSp) ?? ''));
+check('http vira https', paraHttps('http://www.fazenda.pr.gov.br/x') === 'https://www.fazenda.pr.gov.br/x');
 check('portal http bloqueado', !portalPermitido('http://www.fazenda.pr.gov.br/x'));
 check('portal externo bloqueado', !portalPermitido('https://evil.example.com/?p=' + chave));
 check('IP bloqueado', !portalPermitido('https://169.254.169.254/latest/meta-data'));

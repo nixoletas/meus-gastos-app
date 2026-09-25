@@ -14,6 +14,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { pickLang, t } from '../_shared/i18n.ts';
 import { checkSum, normalizeParsed } from '../_shared/receipt.ts';
 import { chaveDaUrl, chaveValida, dadosDaChave, portalPermitido } from './chave.ts';
+import { buscarPagina, paraHttps } from './fetch.ts';
 import { lerPaginaNfce } from './scrape.ts';
 
 /** Teto diário por usuário: a consulta é grátis, mas não somos proxy de ninguém. */
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
   const qrUrl: string | null = receipt.qr_url;
   if (!qrUrl) return await fail(dict.nfce.noQr, 400);
 
-  if (!portalPermitido(qrUrl)) {
+  if (!portalPermitido(paraHttps(qrUrl))) {
     return await fail(dict.nfce.notSefaz, 400);
   }
 
@@ -132,24 +133,16 @@ Deno.serve(async (req) => {
 
     let html: string;
     try {
-      const resposta = await fetch(qrUrl, {
-        redirect: 'follow',
-        signal: controller.signal,
-        headers: {
-          // Alguns portais devolvem página vazia para cliente sem User-Agent.
-          'User-Agent': 'Mozilla/5.0 (compatible; MeusGastos/1.0; +https://meusgastos.dev.br)',
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'pt-BR,pt;q=0.9',
-        },
-      });
-      if (!resposta.ok) {
-        console.error('nfce http', resposta.status, qrUrl);
+      const pagina = await buscarPagina(qrUrl, controller.signal);
+      if (!pagina) return await fail(dict.nfce.notSefaz, 400);
+      if (pagina.status < 200 || pagina.status >= 300) {
+        console.error('nfce http', pagina.status, pagina.url);
         return await fail(
-          `O portal da SEFAZ respondeu ${resposta.status}. Tente de novo ou fotografe a nota.`,
+          `O portal da SEFAZ respondeu ${pagina.status}. Tente de novo ou fotografe a nota.`,
           502
         );
       }
-      html = await resposta.text();
+      html = pagina.html;
     } finally {
       clearTimeout(timer);
     }

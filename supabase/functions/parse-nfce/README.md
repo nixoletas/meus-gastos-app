@@ -14,7 +14,10 @@ padaria, recibo, cupom velho — e como saída quando este aqui falha.
 2. Esta função extrai a **chave de acesso** (44 dígitos) do parâmetro `p=`,
    confere o dígito verificador (módulo 11) e só então vai à rede.
 3. Busca a própria URL do QR — que já aponta para o portal da UF certa, então
-   não existe tabela de endereço por estado para manter.
+   não existe tabela de endereço por estado para manter. A busca (`fetch.ts`)
+   segue os redirects à mão guardando cookies: portal em ASP.NET (SP) só
+   entrega a nota depois do 302 que grava a sessão. Cada salto passa de novo
+   pelo filtro de portal, e QR em `http://` é trocado por `https://`.
 4. Interpreta o HTML e grava pela mesma RPC `save_receipt_parse` usada pela
    leitura por foto.
 

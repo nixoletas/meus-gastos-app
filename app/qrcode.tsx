@@ -10,11 +10,17 @@ import { setPendingScan } from '../src/lib/receipts';
 import { useTheme } from '../src/theme/ThemeContext';
 import { Text } from '../src/theme/typography';
 
-/** O QR da NFC-e sempre aponta para o portal da SEFAZ do estado. */
+/**
+ * O QR da NFC-e sempre aponta para o portal da SEFAZ do estado. Alguns ainda
+ * vêm em `http://`; o servidor troca por https antes de consultar.
+ */
 function pareceNfce(valor: string): boolean {
   try {
-    const url = new URL(valor);
-    return url.protocol === 'https:' && url.hostname.toLowerCase().endsWith('.gov.br');
+    const url = new URL(valor.trim());
+    return (
+      (url.protocol === 'https:' || url.protocol === 'http:') &&
+      url.hostname.toLowerCase().endsWith('.gov.br')
+    );
   } catch {
     return false;
   }
@@ -44,7 +50,7 @@ export default function QrCodeScreen() {
     }
 
     jaLeu.current = true;
-    setPendingScan(valor);
+    setPendingScan(valor.trim());
     router.back();
   }
 
