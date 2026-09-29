@@ -1252,3 +1252,179 @@ begin
     alter publication supabase_realtime add table public.household_members;
   end if;
 end $rtm$;
+
+-- ============================================================================
+--  MEIOS DE PAGAMENTO + ONDE FOI O GASTO
+--
+--  Meio de pagamento é a combinação de instituição + forma: "Banco do Brasil
+--  (crédito)", "Nubank (pix)". `provider` aponta para o logo embutido no app
+--  (nubank, bb, itau...) ou para um genérico (dinheiro, vale); nulo = sem logo.
+--  Como tudo do caderno, pertence ao DONO e segue a mesma RLS compartilhada.
+--
+--  O local é texto livre (nome do estabelecimento) e/ou um link do Google Maps.
+--  Tudo opcional: gasto antigo e cliente antigo continuam valendo.
+-- ============================================================================
+create table if not exists public.payment_methods (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  name        text not null check (char_length(btrim(name)) between 1 and 60),
+  provider    text,
+  kind        text not null default 'outro'
+              check (kind in ('credito', 'debito', 'pix', 'dinheiro', 'vale', 'boleto', 'outro')),
+  color       text not null default '#64748B',
+  position    int  not null default 0,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists payment_methods_user_idx on public.payment_methods (user_id);
+
+alter table public.expenses
+  add column if not exists payment_method_id uuid
+    references public.payment_methods (id) on delete set null,
+  add column if not exists place     text,
+  add column if not exists place_url text;
+
+create index if not exists expenses_payment_method_idx
+  on public.expenses (payment_method_id) where payment_method_id is not null;
+
+alter table public.payment_methods enable row level security;
+
+drop policy if exists "payment_methods_select" on public.payment_methods;
+drop policy if exists "payment_methods_insert" on public.payment_methods;
+drop policy if exists "payment_methods_update" on public.payment_methods;
+drop policy if exists "payment_methods_delete" on public.payment_methods;
+create policy "payment_methods_select" on public.payment_methods for select to authenticated
+  using (user_id in (select public.readable_owner_ids()));
+create policy "payment_methods_insert" on public.payment_methods for insert to authenticated
+  with check (user_id in (select public.writable_owner_ids()));
+create policy "payment_methods_update" on public.payment_methods for update to authenticated
+  using      (user_id in (select public.writable_owner_ids()))
+  with check (user_id in (select public.writable_owner_ids()));
+create policy "payment_methods_delete" on public.payment_methods for delete to authenticated
+  using (user_id in (select public.writable_owner_ids()));
+
+drop trigger if exists payment_methods_owner_lock on public.payment_methods;
+create trigger payment_methods_owner_lock before update on public.payment_methods
+  for each row execute function public.forbid_owner_change();
+
+do $rtp$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'payment_methods'
+  ) then
+    alter publication supabase_realtime add table public.payment_methods;
+  end if;
+end $rtp$;
+
+-- Mesma assinatura de antes: só passa a ler os campos novos do `p_expense`.
+-- Campo ausente no JSON (cliente antigo, ex.: a web ainda sem a feature) não
+-- apaga o que já estava gravado — só quem manda o campo decide o valor.
+-- Meio de pagamento de outro caderno vira nulo em vez de vazar a referência.
+create or replace function public.save_expense_with_items(
+  p_expense    jsonb,
+  p_items      jsonb default '[]'::jsonb,
+  p_receipt_id uuid    default null,
+  p_expense_id uuid    default null,
+  p_owner_id   uuid    default null   -- nulo = meu próprio caderno
+)
+returns public.expenses
+language plpgsql
+as $fn$
+declare
+  e       public.expenses;
+  uid     uuid := auth.uid();
+  v_owner uuid := coalesce(p_owner_id, auth.uid());
+  v_pm    uuid;
+begin
+  if uid is null then
+    raise exception 'Não autenticado' using errcode = '28000';
+  end if;
+  if not public.can_write(v_owner) then
+    raise exception 'Sem permissão para escrever neste caderno' using errcode = '42501';
+  end if;
+
+  select pm.id into v_pm
+    from public.payment_methods pm
+   where pm.id = nullif(p_expense->>'payment_method_id', '')::uuid
+     and pm.user_id = v_owner;
+
+  if p_expense_id is null then
+    insert into public.expenses (
+      user_id, amount, note, category_id, subcategory_id, occurred_at,
+      payment_method_id, place, place_url
+    )
+    values (
+      v_owner,
+      round((p_expense->>'amount')::numeric, 2),
+      nullif(btrim(coalesce(p_expense->>'note', '')), ''),
+      nullif(p_expense->>'category_id', '')::uuid,
+      nullif(p_expense->>'subcategory_id', '')::uuid,
+      (p_expense->>'occurred_at')::date,
+      v_pm,
+      nullif(btrim(coalesce(p_expense->>'place', '')), ''),
+      nullif(btrim(coalesce(p_expense->>'place_url', '')), '')
+    )
+    returning * into e;
+  else
+    update public.expenses x set
+      amount            = round((p_expense->>'amount')::numeric, 2),
+      note              = nullif(btrim(coalesce(p_expense->>'note', '')), ''),
+      category_id       = nullif(p_expense->>'category_id', '')::uuid,
+      subcategory_id    = nullif(p_expense->>'subcategory_id', '')::uuid,
+      occurred_at       = (p_expense->>'occurred_at')::date,
+      payment_method_id = case when p_expense ? 'payment_method_id'
+                               then v_pm else x.payment_method_id end,
+      place             = case when p_expense ? 'place'
+                               then nullif(btrim(coalesce(p_expense->>'place', '')), '')
+                               else x.place end,
+      place_url         = case when p_expense ? 'place_url'
+                               then nullif(btrim(coalesce(p_expense->>'place_url', '')), '')
+                               else x.place_url end
+    where x.id = p_expense_id
+      and x.user_id = v_owner      -- o gasto tem que ser do caderno pedido
+    returning * into e;
+
+    if not found then
+      raise exception 'Gasto não encontrado';
+    end if;
+  end if;
+
+  -- A lista enviada é a verdade: o usuário pode ter apagado ou editado itens.
+  delete from public.expense_items where expense_id = e.id;
+
+  insert into public.expense_items (
+    user_id, expense_id, receipt_id, description, raw_text,
+    quantity, unit, unit_price, total, category_id, position
+  )
+  select
+    v_owner,
+    e.id,
+    coalesce(nullif(it->>'receipt_id', '')::uuid, p_receipt_id),
+    coalesce(nullif(btrim(it->>'description'), ''), 'Item'),
+    nullif(btrim(coalesce(it->>'raw_text', '')), ''),
+    coalesce(nullif(it->>'quantity', '')::numeric, 1),
+    nullif(btrim(coalesce(it->>'unit', '')), ''),
+    nullif(it->>'unit_price', '')::numeric,
+    round(coalesce(nullif(it->>'total', '')::numeric, 0), 2),
+    nullif(it->>'category_id', '')::uuid,
+    (ord - 1)::int
+  from jsonb_array_elements(coalesce(p_items, '[]'::jsonb))
+       with ordinality as t(it, ord);
+
+  -- Sobra de rascunho: itens que ficaram presos só à notinha.
+  if p_receipt_id is not null then
+    delete from public.expense_items
+     where receipt_id = p_receipt_id and expense_id is null;
+
+    update public.receipts
+       set expense_id = e.id
+     where id = p_receipt_id
+       and user_id = v_owner;
+  end if;
+
+  return e;
+end;
+$fn$;

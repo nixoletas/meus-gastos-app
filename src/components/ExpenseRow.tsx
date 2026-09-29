@@ -5,11 +5,13 @@ import { StyleSheet,
   View,
 } from 'react-native';
 import { Text } from '../theme/typography';
+import { useData } from '../context/DataContext';
 import { useT } from '../i18n';
 import { Category, Expense } from '../types';
 import { useTheme } from '../theme/ThemeContext';
 import { formatBRL } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
+import { PaymentLogo } from './PaymentLogo';
 import { PressableScale } from './PressableScale';
 
 type Props = {
@@ -23,6 +25,8 @@ type Props = {
 export function ExpenseRow({ expense, category, subcategory, onPress }: Props) {
   const { colors } = useTheme();
   const t = useT();
+  const { getPaymentMethod } = useData();
+  const payment = getPaymentMethod(expense.payment_method_id);
 
   const display = subcategory ?? category;
   const icon = display?.icon ?? 'tag';
@@ -37,8 +41,10 @@ export function ExpenseRow({ expense, category, subcategory, onPress }: Props) {
       : expense.has_receipt
         ? t.common.receipt
         : null;
-  // Mostra a nota; se não houver, a categoria-mãe (quando for subcategoria).
-  const secondary = note || (subcategory ? category?.name : undefined);
+  const place = expense.place?.trim();
+  // Mostra a nota e o lugar; sem nenhum dos dois, a categoria-mãe (quando for subcategoria).
+  const secondary =
+    [note, place].filter(Boolean).join(' · ') || (subcategory ? category?.name : undefined);
 
   return (
     <PressableScale
@@ -70,6 +76,14 @@ export function ExpenseRow({ expense, category, subcategory, onPress }: Props) {
           </View>
         )}
       </View>
+      {payment && (
+        <PaymentLogo
+          provider={payment.provider}
+          kind={payment.kind}
+          color={payment.color}
+          size={20}
+        />
+      )}
       <Text style={[styles.amount, { color: colors.text }]}>
         {formatBRL(expense.amount)}
       </Text>

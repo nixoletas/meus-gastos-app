@@ -23,8 +23,16 @@ Expo + React Native Web.
   (Netflix, Spotify, Uber, iFood, Disney+, Amazon Prime, Apple Music, Google,
   Microsoft 365, HBO Max, PlayStation, e mais).
 - 🔎 **Busca** de categorias e subcategorias.
-- 📊 **Gráficos**: gráfico de pizza (donut) com os gastos por categoria, com
-  navegação **mensal** e **anual**.
+- 📊 **Visualizar gastos**: o mesmo período por vários ângulos — **categorias**
+  (donut até o item da notinha), **linha do tempo** (dia a dia ou mês a mês,
+  com média e dia mais caro), **meio de pagamento**, **locais**, **dia da
+  semana** e a **lista** completa por data ou por valor.
+- 💳 **Meios de pagamento**: cadastre "Nubank (Pix)", "Banco do Brasil
+  (Crédito)"... com os **logos dos principais bancos** (Nubank, Itaú, BB,
+  Bradesco, Caixa, Santander, Inter, C6, PicPay, Mercado Pago e mais) e
+  escolha no lançamento.
+- 📍 **Onde foi o gasto**: nome do estabelecimento ou **link do Google Maps**
+  (cola o link e o nome do lugar sai dele). Sugere os lugares que você já usou.
 - 📅 **Controle no tempo**: visão **mensal** e **anual**, com navegação entre
   períodos.
 - 🚨 **Alertas de gasto excessivo**: aba **Meus Limites** para definir tetos

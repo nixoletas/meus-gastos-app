@@ -23,6 +23,32 @@ export type Expense = {
   items_count: number;
   /** Se existe foto de notinha anexada. Mantido por trigger no banco. */
   has_receipt: boolean;
+  /** Meio de pagamento usado (cartão, pix, dinheiro...). Opcional. */
+  payment_method_id: string | null;
+  /** Nome do estabelecimento onde o gasto foi feito. Opcional. */
+  place: string | null;
+  /** Link do Google Maps do estabelecimento. Opcional. */
+  place_url: string | null;
+};
+
+/** Forma de pagar. Mesmo vocabulário que a leitura da notinha devolve. */
+export type PaymentKind = 'credito' | 'debito' | 'pix' | 'dinheiro' | 'vale' | 'boleto' | 'outro';
+
+/**
+ * Meio de pagamento cadastrado: instituição + forma, ex.: "Nubank (Pix)".
+ * Pertence ao dono do caderno, como categorias e limites.
+ */
+export type PaymentMethod = {
+  id: string;
+  user_id: string;
+  /** Nome da instituição ou apelido: "Nubank", "Cartão da empresa". */
+  name: string;
+  /** Chave do logo (ver `paymentProviders`). Nulo = sem logo. */
+  provider: string | null;
+  kind: PaymentKind;
+  color: string;
+  position: number;
+  created_at: string;
 };
 
 export type ReceiptStatus = 'pending' | 'parsing' | 'done' | 'failed';

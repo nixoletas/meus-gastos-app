@@ -49,11 +49,11 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="graficos"
+          name="visualizar"
           options={{
             title: t.tabs.charts,
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="chart-donut" size={size} color={color} />
+              <MaterialCommunityIcons name="chart-box-outline" size={size} color={color} />
             ),
           }}
         />
