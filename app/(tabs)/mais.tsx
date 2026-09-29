@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReportExportModal } from '../../src/components/ReportExportModal';
 import { useAuth } from '../../src/context/AuthContext';
+import { useData } from '../../src/context/DataContext';
 import { useLedger } from '../../src/context/LedgerContext';
 import { useT } from '../../src/i18n';
 import { Text } from '../../src/theme/typography';
@@ -21,6 +22,7 @@ export default function MaisScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const { members, isShared, activeLedger } = useLedger();
+  const { paymentMethods } = useData();
 
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -55,6 +57,23 @@ export default function MaisScreen() {
             <Text style={[styles.rowTitle, { color: colors.text }]}>{t.tabs.family}</Text>
             <Text style={[styles.rowSub, { color: colors.textMuted }]} numberOfLines={1}>
               {resumoFamilia}
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
+        </Pressable>
+
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+        <Pressable onPress={() => router.push('/pagamentos')} style={styles.row}>
+          <View style={[styles.rowIcon, { backgroundColor: colors.primarySoft }]}>
+            <MaterialCommunityIcons name="credit-card-multiple-outline" size={22} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>{t.payment.manageTitle}</Text>
+            <Text style={[styles.rowSub, { color: colors.textMuted }]} numberOfLines={1}>
+              {paymentMethods.length > 0
+                ? t.payment.manageSubCount(paymentMethods.length)
+                : t.payment.manageSub}
             </Text>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />

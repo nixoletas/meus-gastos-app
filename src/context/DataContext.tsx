@@ -10,7 +10,15 @@ import { DEFAULT_CATEGORIES, defaultName } from '../data/defaultCategories';
 import { getActiveLang } from '../i18n/active';
 import { AppIconName } from '../data/icons';
 import { supabase } from '../lib/supabase';
-import { Budget, Category, CategoryWithSubs, DraftItem, Expense } from '../types';
+import {
+  Budget,
+  Category,
+  CategoryWithSubs,
+  DraftItem,
+  Expense,
+  PaymentKind,
+  PaymentMethod,
+} from '../types';
 import { useAuth } from './AuthContext';
 import { useLedger } from './LedgerContext';
 
@@ -20,6 +28,16 @@ type NewExpense = {
   category_id: string | null;
   subcategory_id: string | null;
   occurred_at: string;
+  payment_method_id?: string | null;
+  place?: string | null;
+  place_url?: string | null;
+};
+
+type PaymentMethodInput = {
+  name: string;
+  provider: string | null;
+  kind: PaymentKind;
+  color: string;
 };
 
 /** Gasto + subcompras salvos numa transação só (RPC `save_expense_with_items`). */
@@ -45,6 +63,8 @@ type DataContextValue = {
   categories: Category[];
   expenses: Expense[];
   budgets: Budget[];
+  paymentMethods: PaymentMethod[];
+  getPaymentMethod: (id: string | null) => PaymentMethod | undefined;
   categoriesWithSubs: CategoryWithSubs[];
   getCategory: (id: string | null) => Category | undefined;
   refresh: () => Promise<void>;
@@ -69,6 +89,9 @@ type DataContextValue = {
     limit_amount: number;
   }) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
+  addPaymentMethod: (input: PaymentMethodInput) => Promise<PaymentMethod | null>;
+  updatePaymentMethod: (id: string, input: Partial<PaymentMethodInput>) => Promise<void>;
+  deletePaymentMethod: (id: string) => Promise<void>;
 };
 
 const DataContext = createContext<DataContextValue | undefined>(undefined);
@@ -81,6 +104,13 @@ const sortExpenses = (list: Expense[]) =>
   );
 
 /** Insere ou substitui a linha pelo id, evitando duplicar o que o realtime já trouxe. */
+const sortPaymentMethods = (list: PaymentMethod[]) =>
+  [...list].sort((a, b) =>
+    a.position === b.position
+      ? a.created_at.localeCompare(b.created_at)
+      : a.position - b.position
+  );
+
 const upsertById = <T extends { id: string }>(list: T[], row: T) => {
   const index = list.findIndex((item) => item.id === row.id);
   if (index === -1) return [...list, row];
@@ -101,6 +131,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [hideValue, setHideValueState] = useState(false);
 
   const seedDefaults = useCallback(async (uid: string): Promise<Category[]> => {
@@ -157,7 +188,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     try {
       // O filtro por dono é obrigatório: a RLS agora libera também os cadernos
       // compartilhados, então sem ele a tela viria com a união de todos.
-      const [catRes, expRes, budRes, settingsRes] = await Promise.all([
+      const [catRes, expRes, budRes, settingsRes, pmRes] = await Promise.all([
         supabase
           .from('categories')
           .select('*')
@@ -176,6 +207,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           .select('hide_value')
           .eq('user_id', userId)
           .maybeSingle(),
+        supabase
+          .from('payment_methods')
+          .select('*')
+          .eq('user_id', ownerId)
+          .order('position')
+          .order('created_at'),
       ]);
 
       let cats = (catRes.data ?? []) as Category[];
@@ -188,6 +225,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setCategories(cats);
       setExpenses((expRes.data ?? []) as Expense[]);
       setBudgets((budRes.data ?? []) as Budget[]);
+      // Antes da migração a tabela não existe: segue sem meios de pagamento.
+      setPaymentMethods(sortPaymentMethods((pmRes.data ?? []) as PaymentMethod[]));
       setHideValueState(settingsRes.data?.hide_value ?? false);
     } finally {
       setLoading(false);
@@ -201,6 +240,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setCategories([]);
       setExpenses([]);
       setBudgets([]);
+      setPaymentMethods([]);
       setHideValueState(false);
       setLoading(false);
     }
@@ -256,6 +296,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       )
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'payment_methods', filter },
+        (payload) => {
+          setPaymentMethods((prev) => {
+            if (payload.eventType === 'DELETE') {
+              return prev.filter((p) => p.id !== (payload.old as PaymentMethod).id);
+            }
+            return sortPaymentMethods(upsertById(prev, payload.new as PaymentMethod));
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
         // Preferência é pessoal: escuta a própria linha, não a do dono.
         {
           event: '*',
@@ -286,6 +338,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const getCategory = useCallback(
     (id: string | null) => (id ? categories.find((c) => c.id === id) : undefined),
     [categories]
+  );
+
+  const getPaymentMethod = useCallback(
+    (id: string | null) => (id ? paymentMethods.find((p) => p.id === id) : undefined),
+    [paymentMethods]
   );
 
   const addExpense = useCallback(
@@ -456,6 +513,53 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [ownerId, canWrite]
   );
 
+  const addPaymentMethod = useCallback(
+    async (input: PaymentMethodInput): Promise<PaymentMethod | null> => {
+      if (!ownerId || !canWrite) return null;
+      const position = paymentMethods.reduce((max, p) => Math.max(max, p.position), -1) + 1;
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .insert({ ...input, position, user_id: ownerId })
+        .select()
+        .single();
+      if (error || !data) return null;
+      const method = data as PaymentMethod;
+      setPaymentMethods((prev) => sortPaymentMethods(upsertById(prev, method)));
+      return method;
+    },
+    [ownerId, canWrite, paymentMethods]
+  );
+
+  const updatePaymentMethod = useCallback(
+    async (id: string, input: Partial<PaymentMethodInput>) => {
+      if (!ownerId || !canWrite) return;
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .update(input)
+        .eq('id', id)
+        .eq('user_id', ownerId)
+        .select()
+        .single();
+      if (error || !data) return;
+      setPaymentMethods((prev) => sortPaymentMethods(upsertById(prev, data as PaymentMethod)));
+    },
+    [ownerId, canWrite]
+  );
+
+  const deletePaymentMethod = useCallback(
+    async (id: string) => {
+      if (!ownerId || !canWrite) return;
+      // O banco solta os gastos (`on delete set null`); refletimos isso aqui
+      // sem esperar o realtime de cada linha.
+      setPaymentMethods((prev) => prev.filter((p) => p.id !== id));
+      setExpenses((prev) =>
+        prev.map((e) => (e.payment_method_id === id ? { ...e, payment_method_id: null } : e))
+      );
+      await supabase.from('payment_methods').delete().eq('id', id).eq('user_id', ownerId);
+    },
+    [ownerId, canWrite]
+  );
+
   const setHideValue = useCallback(
     async (value: boolean) => {
       if (!userId) return;
@@ -474,6 +578,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       categories,
       expenses,
       budgets,
+      paymentMethods,
+      getPaymentMethod,
       categoriesWithSubs,
       getCategory,
       refresh: loadAll,
@@ -486,6 +592,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteCategory,
       setBudget,
       deleteBudget,
+      addPaymentMethod,
+      updatePaymentMethod,
+      deletePaymentMethod,
       hideValue,
       setHideValue,
     }),
@@ -495,6 +604,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       categories,
       expenses,
       budgets,
+      paymentMethods,
+      getPaymentMethod,
       categoriesWithSubs,
       getCategory,
       loadAll,
@@ -507,6 +618,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteCategory,
       setBudget,
       deleteBudget,
+      addPaymentMethod,
+      updatePaymentMethod,
+      deletePaymentMethod,
       hideValue,
       setHideValue,
     ]

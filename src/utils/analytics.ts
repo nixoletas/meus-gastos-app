@@ -1,5 +1,6 @@
 import { Budget, Category, Expense } from '../types';
 import { isInPeriod, Period } from './date';
+import { normalizeText } from './text';
 
 export type CategoryTotal = {
   category: Category | undefined;
@@ -259,4 +260,193 @@ export function evaluateBudgets(
       segments,
     };
   });
+}
+
+export type GroupTotal = {
+  key: string;
+  total: number;
+  count: number;
+  percent: number; // 0..1 sobre o total do período
+  expenses: Expense[];
+};
+
+/** Agrupa os gastos do período por uma chave qualquer, do maior pro menor. */
+function groupForPeriod(
+  expenses: Expense[],
+  ref: Date,
+  period: Period,
+  keyOf: (e: Expense) => string
+): GroupTotal[] {
+  const buckets = new Map<string, GroupTotal>();
+  let grand = 0;
+  for (const e of expenses) {
+    if (!isInPeriod(e.occurred_at, ref, period)) continue;
+    const key = keyOf(e);
+    const bucket = buckets.get(key) ?? { key, total: 0, count: 0, percent: 0, expenses: [] };
+    bucket.total += e.amount;
+    bucket.count += 1;
+    bucket.expenses.push(e);
+    buckets.set(key, bucket);
+    grand += e.amount;
+  }
+  return [...buckets.values()]
+    .map((b) => ({ ...b, percent: grand > 0 ? b.total / grand : 0 }))
+    .sort((a, b) => b.total - a.total);
+}
+
+export const NO_PAYMENT_KEY = '__none__';
+export const NO_PLACE_KEY = '__none__';
+
+/** Por meio de pagamento. Sem meio informado cai em `NO_PAYMENT_KEY`. */
+export function totalsByPaymentMethod(
+  expenses: Expense[],
+  ref: Date,
+  period: Period
+): GroupTotal[] {
+  return groupForPeriod(expenses, ref, period, (e) => e.payment_method_id ?? NO_PAYMENT_KEY);
+}
+
+/** Chave de agrupamento do local: sem caixa, acento nem espaço sobrando. */
+export function placeKey(place: string | null | undefined): string {
+  const clean = normalizeText(place ?? '');
+  return clean || NO_PLACE_KEY;
+}
+
+export type PlaceTotal = GroupTotal & {
+  /** Nome como o usuário escreveu da última vez. */
+  name: string | null;
+  /** Primeiro link do Maps encontrado entre os gastos do lugar. */
+  url: string | null;
+};
+
+/** Por estabelecimento. "Padaria X" e "padaria x" são o mesmo lugar. */
+export function totalsByPlace(expenses: Expense[], ref: Date, period: Period): PlaceTotal[] {
+  return groupForPeriod(expenses, ref, period, (e) => placeKey(e.place)).map((g) => {
+    // `expenses` vem ordenado do mais recente: o primeiro nome é o atual.
+    const named = g.expenses.find((e) => e.place?.trim());
+    const linked = g.expenses.find((e) => e.place_url);
+    return {
+      ...g,
+      name: named?.place?.trim() ?? null,
+      url: linked?.place_url ?? null,
+    };
+  });
+}
+
+/** Lugares já usados, do mais frequente pro menos — sugestão no lançamento. */
+export function knownPlaces(expenses: Expense[]): { name: string; url: string | null }[] {
+  const seen = new Map<string, { name: string; url: string | null; count: number }>();
+  for (const e of expenses) {
+    const name = e.place?.trim();
+    if (!name) continue;
+    const key = placeKey(name);
+    const entry = seen.get(key);
+    if (entry) {
+      entry.count += 1;
+      if (!entry.url && e.place_url) entry.url = e.place_url;
+    } else {
+      seen.set(key, { name, url: e.place_url ?? null, count: 1 });
+    }
+  }
+  return [...seen.values()]
+    .sort((a, b) => b.count - a.count)
+    .map(({ name, url }) => ({ name, url }));
+}
+
+export type TimeBucket = {
+  /** Dia do mês (1..31) ou mês do ano (0..11). */
+  index: number;
+  total: number;
+  count: number;
+  expenses: Expense[];
+  /** Ainda não chegou (dia/mês no futuro) — a barra fica apagada. */
+  future: boolean;
+};
+
+/** Linha do tempo: dias do mês, ou meses do ano. */
+export function timelineBuckets(expenses: Expense[], ref: Date, period: Period): TimeBucket[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const size =
+    period === 'year' ? 12 : new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
+  const buckets: TimeBucket[] = Array.from({ length: size }, (_, i) => {
+    const start =
+      period === 'year'
+        ? new Date(ref.getFullYear(), i, 1)
+        : new Date(ref.getFullYear(), ref.getMonth(), i + 1);
+    return { index: period === 'year' ? i : i + 1, total: 0, count: 0, expenses: [], future: start > today };
+  });
+  for (const e of expenses) {
+    if (!isInPeriod(e.occurred_at, ref, period)) continue;
+    const [, m, d] = e.occurred_at.split('-').map(Number);
+    const bucket = buckets[period === 'year' ? m - 1 : d - 1];
+    if (!bucket) continue;
+    bucket.total += e.amount;
+    bucket.count += 1;
+    bucket.expenses.push(e);
+  }
+  return buckets;
+}
+
+export type WeekdayTotal = {
+  /** 0 = domingo. */
+  weekday: number;
+  total: number;
+  count: number;
+  /** Quantos desses dias da semana já passaram no período (para a média). */
+  days: number;
+  expenses: Expense[];
+};
+
+/** Por dia da semana, com a média por dia que já aconteceu no período. */
+export function totalsByWeekday(expenses: Expense[], ref: Date, period: Period): WeekdayTotal[] {
+  const out: WeekdayTotal[] = Array.from({ length: 7 }, (_, weekday) => ({
+    weekday,
+    total: 0,
+    count: 0,
+    days: 0,
+    expenses: [],
+  }));
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start =
+    period === 'year'
+      ? new Date(ref.getFullYear(), 0, 1)
+      : new Date(ref.getFullYear(), ref.getMonth(), 1);
+  const end =
+    period === 'year'
+      ? new Date(ref.getFullYear(), 11, 31)
+      : new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
+  const last = end < today ? end : today;
+  for (const d = new Date(start); d <= last; d.setDate(d.getDate() + 1)) {
+    out[d.getDay()].days += 1;
+  }
+
+  for (const e of expenses) {
+    if (!isInPeriod(e.occurred_at, ref, period)) continue;
+    const [y, m, d] = e.occurred_at.split('-').map(Number);
+    const slot = out[new Date(y, m - 1, d).getDay()];
+    slot.total += e.amount;
+    slot.count += 1;
+    slot.expenses.push(e);
+  }
+  return out;
+}
+
+/** Dias do período que já começaram (para média diária). Mínimo 1. */
+export function elapsedDays(ref: Date, period: Period): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start =
+    period === 'year'
+      ? new Date(ref.getFullYear(), 0, 1)
+      : new Date(ref.getFullYear(), ref.getMonth(), 1);
+  const end =
+    period === 'year'
+      ? new Date(ref.getFullYear(), 11, 31)
+      : new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
+  if (start > today) return 1;
+  const last = end < today ? end : today;
+  return Math.max(1, Math.round((last.getTime() - start.getTime()) / 86400000) + 1);
 }

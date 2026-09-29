@@ -30,6 +30,8 @@ import { CalendarModal } from '../src/components/CalendarModal';
 import { hexWithAlpha } from '../src/components/CategoryIcon';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { PressableScale } from '../src/components/PressableScale';
+import { PaymentLogo } from '../src/components/PaymentLogo';
+import { PlaceField } from '../src/components/PlaceField';
 import { ReceiptSection } from '../src/components/ReceiptSection';
 import { SuccessFlash } from '../src/components/SuccessFlash';
 import { SuccessOverlay } from '../src/components/SuccessOverlay';
@@ -39,8 +41,10 @@ import { useT } from '../src/i18n';
 import { ParseResult, takePendingScan } from '../src/lib/receipts';
 import { useReceipt } from '../src/lib/useReceipt';
 import { useTheme } from '../src/theme/ThemeContext';
+import { knownPlaces } from '../src/utils/analytics';
 import { formatBRL, maskCurrencyInput, rawToReais, reaisToRaw } from '../src/utils/currency';
 import { fromISODate, relativeDayLabel, toISODate } from '../src/utils/date';
+import { paymentLabel } from '../src/utils/payment';
 
 /**
  * Última data usada num novo gasto, junto do dia em que foi escolhida.
@@ -51,6 +55,12 @@ import { fromISODate, relativeDayLabel, toISODate } from '../src/utils/date';
  * velha. (Na web o mesmo papel é feito pelo `sessionStorage`, que morre com a aba.)
  */
 let lastUsed: { date: string; on: string } | null = null;
+
+/**
+ * Último meio de pagamento usado num lançamento novo. Quem paga quase tudo no
+ * mesmo cartão não escolhe de novo a cada gasto; trocar é um toque.
+ */
+let lastPaymentMethodId: string | null = null;
 
 function readRememberedDate(): string | null {
   if (!lastUsed) return null;
@@ -70,6 +80,7 @@ export default function NovoGastoScreen() {
     saveExpenseWithItems,
     updateExpense,
     deleteExpense,
+    paymentMethods,
   } = useData();
 
   const { categories } = useData();
@@ -79,6 +90,12 @@ export default function NovoGastoScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [subcategoryId, setSubcategoryId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(() => {
+    if (editing) return editing.payment_method_id ?? null;
+    return paymentMethods.some((p) => p.id === lastPaymentMethodId) ? lastPaymentMethodId : null;
+  });
+  const [place, setPlace] = useState('');
+  const [placeUrl, setPlaceUrl] = useState<string | null>(null);
   const [date, setDate] = useState(() => {
     if (editing) return fromISODate(editing.occurred_at);
     const remembered = readRememberedDate();
@@ -104,6 +121,19 @@ export default function NovoGastoScreen() {
       // Só preenche o que está vazio: o que a pessoa digitou vale mais que o OCR.
       const total = Number(result.receipt.total ?? result.itemsTotal) || 0;
       if (total > 0) setRaw((current) => (current ? current : reaisToRaw(total)));
+
+      // Mercado da nota vira o "onde", se ainda estiver em branco.
+      const merchant = result.receipt.merchant?.trim();
+      if (merchant) setPlace((current) => (current.trim() ? current : merchant));
+
+      // Forma lida da nota ("credito", "pix"...) escolhe o meio, se só um casar.
+      const kind = result.receipt.payment_method;
+      if (kind) {
+        const matches = paymentMethods.filter((p) => p.kind === kind);
+        if (matches.length === 1) {
+          setPaymentMethodId((current) => current ?? matches[0].id);
+        }
+      }
 
       const issued = result.receipt.issued_at ? new Date(result.receipt.issued_at) : null;
       if (!dateTouched && issued && !Number.isNaN(issued.getTime()) && issued <= new Date()) {
@@ -140,6 +170,21 @@ export default function NovoGastoScreen() {
     }
   }, [categories]);
 
+  // Meio de pagamento recém-cadastrado (via "+ Cadastrar") já vem escolhido.
+  const knownPaymentIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const currentIds = new Set(paymentMethods.map((p) => p.id));
+    if (knownPaymentIds.current === null) {
+      knownPaymentIds.current = currentIds;
+      return;
+    }
+    const novos = paymentMethods.filter((p) => !knownPaymentIds.current!.has(p.id));
+    knownPaymentIds.current = currentIds;
+    if (novos.length === 1) setPaymentMethodId(novos[0].id);
+  }, [paymentMethods]);
+
+  const placeSuggestions = useMemo(() => knownPlaces(expenses), [expenses]);
+
   // Pré-carrega os dados quando estamos editando um gasto.
   useEffect(() => {
     if (editing) {
@@ -148,6 +193,9 @@ export default function NovoGastoScreen() {
       setSubcategoryId(editing.subcategory_id);
       setNote(editing.note ?? '');
       setDate(fromISODate(editing.occurred_at));
+      setPaymentMethodId(editing.payment_method_id ?? null);
+      setPlace(editing.place ?? '');
+      setPlaceUrl(editing.place_url ?? null);
     } else {
       const timer = setTimeout(() => amountRef.current?.focus(), 350);
       return () => clearTimeout(timer);
@@ -193,6 +241,9 @@ export default function NovoGastoScreen() {
       category_id: categoryId,
       subcategory_id: subcategoryId,
       occurred_at: iso,
+      payment_method_id: paymentMethodId,
+      place: place.trim() || null,
+      place_url: placeUrl,
     };
 
     // Com notinha ou subcompras o gasto vai por RPC: gasto, itens e foto
@@ -233,12 +284,15 @@ export default function NovoGastoScreen() {
     }
     receiptState.markSaved();
     lastUsed = { date: iso, on: toISODate(new Date()) };
+    lastPaymentMethodId = paymentMethodId;
 
     if (keepOpen) {
       // Comemoração leve: o overlay cheio encerra o fluxo, e aqui ele continua.
       setFlash({ id: Date.now(), label: t.expense.flashSaved(formatBRL(amount)) });
       setRaw('');
       setNote('');
+      setPlace('');
+      setPlaceUrl(null);
       receiptState.reset();
       setSaving(false);
       amountRef.current?.focus();
@@ -465,6 +519,62 @@ export default function NovoGastoScreen() {
             </Pressable>
           </View>
 
+          {/* Meio de pagamento */}
+          <Text style={[styles.label, { color: colors.text }]}>
+            {t.payment.label}{' '}
+            <Text style={{ color: colors.textMuted }}>{t.expense.optional}</Text>
+          </Text>
+          <View style={styles.chipsWrap}>
+            {paymentMethods.map((pm) => {
+              const active = pm.id === paymentMethodId;
+              return (
+                <Pressable
+                  key={pm.id}
+                  onPress={() => setPaymentMethodId(active ? null : pm.id)}
+                  style={[
+                    styles.payChip,
+                    {
+                      backgroundColor: active ? hexWithAlpha(pm.color, 0.16) : colors.card,
+                      borderColor: active ? pm.color : colors.border,
+                    },
+                  ]}
+                >
+                  <PaymentLogo provider={pm.provider} kind={pm.kind} color={pm.color} size={24} />
+                  <Text
+                    style={[styles.chipText, { color: active ? colors.text : colors.textMuted }]}
+                    numberOfLines={1}
+                  >
+                    {paymentLabel(pm, t)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            {canWrite && (
+              <Pressable
+                onPress={() => router.push('/pagamento')}
+                style={[styles.createChip, { borderColor: colors.primary }]}
+              >
+                <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
+                <Text style={[styles.chipText, { color: colors.primary }]}>{t.payment.add}</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Onde foi */}
+          <Text style={[styles.label, { color: colors.text }]}>
+            {t.place.label}{' '}
+            <Text style={{ color: colors.textMuted }}>{t.expense.optional}</Text>
+          </Text>
+          <PlaceField
+            place={place}
+            placeUrl={placeUrl}
+            onChangePlace={setPlace}
+            onChangePlaceUrl={setPlaceUrl}
+            suggestions={placeSuggestions}
+            readOnly={!canWrite}
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
+          />
+
           {/* Notas */}
           <Text style={[styles.label, { color: colors.text }]}>{t.expense.notes}</Text>
           <TextInput
@@ -638,7 +748,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
   },
-  chipText: { fontSize: 14, fontWeight: '600' },
+  chipText: { fontSize: 14, fontWeight: '600', flexShrink: 1 },
+  payChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 6,
+    paddingRight: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    maxWidth: '100%',
+  },
   createChip: {
     flexDirection: 'row',
     alignItems: 'center',

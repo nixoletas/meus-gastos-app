@@ -99,6 +99,7 @@ function AuthGate() {
         <Stack.Screen name="config" />
         <Stack.Screen name="legal" />
         <Stack.Screen name="familia" />
+        <Stack.Screen name="pagamentos" />
         <Stack.Screen
           name="novo"
           options={{
@@ -109,6 +110,14 @@ function AuthGate() {
         />
         <Stack.Screen
           name="categoria"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        />
+        <Stack.Screen
+          name="pagamento"
           options={{
             presentation: 'modal',
             animation: 'slide_from_bottom',
